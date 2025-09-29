@@ -1,6 +1,6 @@
 /*******************************************************************************
  * This file is part of SWIFT.
- * Copyright (c) 2019 Matthieu Schaller (schaller@strw.leidenuniv.nl)
+ * Copyright (c) 2022 Bert Vandenbroucke (bert.vandenbroucke@gmail.com)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published
@@ -16,31 +16,10 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  ******************************************************************************/
-#ifndef SWIFT_BLACK_HOLES_STRUCT_H
-#define SWIFT_BLACK_HOLES_STRUCT_H
+#ifndef SWIFT_BLACK_HOLES_ECHOS_DEBUG_H
+#define SWIFT_BLACK_HOLES_ECHOS_DEBUG_H
 
-/**
- * @file src/feedback_struct.h
- * @brief Branches between the different feedback functions.
- */
+__attribute__((always_inline)) INLINE static void black_holes_debug_particle(
+    const struct part* p, const struct xpart* xp) {}
 
-/* Config parameters. */
-#include <config.h>
-
-/* Local includes */
-#include "inline.h"
-
-/* Import the right black holes definition */
-#if defined(BLACK_HOLES_NONE)
-#include "./black_holes/Default/black_holes_struct.h"
-#elif defined(BLACK_HOLES_EAGLE)
-#include "./black_holes/EAGLE/black_holes_struct.h"
-#elif defined(BLACK_HOLES_SPIN_JET)
-#include "./black_holes/SPIN_JET/black_holes_struct.h"
-#elif defined(BLACK_HOLES_ECHOS)
-#include "./black_holes/ECHOS/black_holes_struct.h"
-#else
-#error "Invalid choice of black hole model."
-#endif
-
-#endif /* SWIFT_BLACK_HOLES_STRUCT_H */
+#endif /* SWIFT_BLACK_HOLES_ECHOS_DEBUG_H */
