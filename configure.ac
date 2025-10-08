@@ -2895,7 +2895,7 @@ case "$with_black_holes" in
       with_black_holes="SPIN_JETS (Husko+22)"
    ;;
    ECHOS)
-      AC_DEFINE([BLACK_HOLES_ECHOS], [1], [Spin and jet black hole model])
+      AC_DEFINE([BLACK_HOLES_ECHOS], [1], [ECHOS empirical galaxy model])
    ;;
    *)
       AC_MSG_ERROR([Unknown black-hole model: $with_black_holes])
