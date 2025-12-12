@@ -16,8 +16,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  ******************************************************************************/
-#ifndef SWIFT_ECHOS_BH_IACT_H
-#define SWIFT_ECHOS_BH_IACT_H
+#ifndef SWIFT_ECHOES_BH_IACT_H
+#define SWIFT_ECHOES_BH_IACT_H
 
 /**
  * @brief Density interaction between two particles (non-symmetric).

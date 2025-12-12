@@ -16,8 +16,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  ******************************************************************************/
-#ifndef SWIFT_ECHOS_BLACK_HOLE_PART_H
-#define SWIFT_ECHOS_BLACK_HOLE_PART_H
+#ifndef SWIFT_ECHOES_BLACK_HOLE_PART_H
+#define SWIFT_ECHOES_BLACK_HOLE_PART_H
 
 #include "chemistry_struct.h"
 #include "particle_splitting_struct.h"
@@ -106,4 +106,4 @@ struct bpart {
 
 } SWIFT_STRUCT_ALIGN;
 
-#endif /* SWIFT_ECHOS_BLACK_HOLE_PART_H */
+#endif /* SWIFT_ECHOES_BLACK_HOLE_PART_H */

@@ -16,8 +16,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  ******************************************************************************/
-#ifndef SWIFT_BLACK_HOLES_STRUCT_ECHOS_H
-#define SWIFT_BLACK_HOLES_STRUCT_ECHOS_H
+#ifndef SWIFT_BLACK_HOLES_STRUCT_ECHOES_H
+#define SWIFT_BLACK_HOLES_STRUCT_ECHOES_H
 
 /**
  * @brief Black holes-related fields carried by each *gas* particle.
@@ -111,4 +111,4 @@ black_holes_get_bpart_swallow_id(struct black_holes_bpart_data* p_data) {
   return -1;
 }
 
-#endif /* SWIFT_BLACK_HOLES_STRUCT_ECHOS_H */
+#endif /* SWIFT_BLACK_HOLES_STRUCT_ECHOES_H */

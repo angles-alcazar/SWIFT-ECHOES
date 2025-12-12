@@ -16,8 +16,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  ******************************************************************************/
-#ifndef SWIFT_ECHOS_BLACK_HOLES_H
-#define SWIFT_ECHOS_BLACK_HOLES_H
+#ifndef SWIFT_ECHOES_BLACK_HOLES_H
+#define SWIFT_ECHOES_BLACK_HOLES_H
 
 #include <float.h>
 
@@ -348,4 +348,4 @@ INLINE static void black_holes_create_from_gas(
   black_holes_init_bpart(bp);
 }
 
-#endif /* SWIFT_ECHOS_BLACK_HOLES_H */
+#endif /* SWIFT_ECHOES_BLACK_HOLES_H */

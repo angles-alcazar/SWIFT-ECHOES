@@ -16,10 +16,10 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  ******************************************************************************/
-#ifndef SWIFT_BLACK_HOLES_ECHOS_DEBUG_H
-#define SWIFT_BLACK_HOLES_ECHOS_DEBUG_H
+#ifndef SWIFT_BLACK_HOLES_ECHOES_DEBUG_H
+#define SWIFT_BLACK_HOLES_ECHOES_DEBUG_H
 
 __attribute__((always_inline)) INLINE static void black_holes_debug_particle(
     const struct part* p, const struct xpart* xp) {}
 
-#endif /* SWIFT_BLACK_HOLES_ECHOS_DEBUG_H */
+#endif /* SWIFT_BLACK_HOLES_ECHOES_DEBUG_H */

@@ -16,8 +16,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  ******************************************************************************/
-#ifndef SWIFT_ECHOS_BLACK_HOLES_PROPERTIES_H
-#define SWIFT_ECHOS_BLACK_HOLES_PROPERTIES_H
+#ifndef SWIFT_ECHOES_BLACK_HOLES_PROPERTIES_H
+#define SWIFT_ECHOES_BLACK_HOLES_PROPERTIES_H
 
 #include "chemistry.h"
 #include "hydro_properties.h"
@@ -129,4 +129,4 @@ INLINE static void black_holes_struct_restore(
                       stream, NULL, "black holes props");
 }
 
-#endif /* SWIFT_ECHOS_BLACK_HOLES_PROPERTIES_H */
+#endif /* SWIFT_ECHOES_BLACK_HOLES_PROPERTIES_H */

@@ -16,8 +16,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  ******************************************************************************/
-#ifndef SWIFT_ECHOS_BLACK_HOLES_IO_H
-#define SWIFT_ECHOS_BLACK_HOLES_IO_H
+#ifndef SWIFT_ECHOES_BLACK_HOLES_IO_H
+#define SWIFT_ECHOES_BLACK_HOLES_IO_H
 
 #include "black_holes_part.h"
 #include "io_properties.h"
@@ -174,4 +174,4 @@ INLINE static void black_holes_write_particles(const struct bpart* bparts,
 #endif
 }
 
-#endif /* SWIFT_ECHOS_BLACK_HOLES_IO_H */
+#endif /* SWIFT_ECHOES_BLACK_HOLES_IO_H */
