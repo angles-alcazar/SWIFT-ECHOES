@@ -18,6 +18,7 @@
  ******************************************************************************/
 
 /* Config parameters. */
+#include "physical_constants.h"
 #include <config.h>
 
 #ifdef WITH_FOF
@@ -4049,6 +4050,8 @@ void fof_compute_group_props(struct fof_props *props,
                          number_of_local_seeds, number_of_global_seeds);
   }
 
+  fof_set_black_holes_info(props, bh_props, constants, cosmo, s);
+
   if (verbose)
     message("took %.3f %s.", clocks_from_ticks(getticks() - tic_total),
             clocks_getunit());
@@ -4120,6 +4123,34 @@ void fof_struct_restore(struct fof_props *props, FILE *stream) {
                       "fof_props");
 
   fof_set_current_types(props);
+}
+
+void fof_first_init_bpart(struct bpart *bpart) {
+#ifdef BLACK_HOLES_ECHOES
+    bpart->fof_galaxy_data.gas_mass = 0.f;
+    /* smsutherland: This is INCORRECT.
+     * The default group_id is stored in the fof properties.
+     * But we call this from the space initialization code, which doesn't have the fof properties.
+     * This is just a temporary measure, for testing purposes, not actual final code. */
+    bpart->fof_galaxy_data.group_id = 0;
+    bpart->fof_galaxy_data.group_size = 1;
+#endif
+}
+
+void fof_set_black_holes_info(const struct fof_props *props,
+                              const struct black_holes_props *bh_props,
+                              const struct phys_const *constants,
+                              const struct cosmology *cosmo,
+                              struct space *s) {
+#ifdef BLACK_HOLES_ECHOES
+    struct bpart *bparts = s->bparts;
+    size_t nr_bparts = s->nr_bparts;
+
+    for (size_t i = 0; i < nr_bparts; i++) {
+        bparts[i].fof_galaxy_data.group_id = bparts[i].gpart->fof_data.group_id;
+        bparts[i].fof_galaxy_data.group_size = bparts[i].gpart->fof_data.group_size;
+    }
+#endif /* BLACK_HOLES_ECHOES */
 }
 
 #endif /* WITH_FOF */

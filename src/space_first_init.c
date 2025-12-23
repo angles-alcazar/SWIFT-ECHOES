@@ -23,6 +23,7 @@
 #include <config.h>
 
 /* This object's header. */
+#include "fof.h"
 #include "space.h"
 
 /* Local headers. */
@@ -406,6 +407,9 @@ void space_first_init_bparts_mapper(void *restrict map_data, int count,
   for (int k = 0; k < count; k++) {
 
     black_holes_first_init_bpart(&bp[k], props);
+
+    /* Initialize galaxy data */
+    fof_first_init_bpart(&bp[k]);
 
     /* And the tracers */
     tracers_first_init_bpart(&bp[k], us, phys_const, cosmo);

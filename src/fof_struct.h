@@ -25,6 +25,21 @@
 #ifdef WITH_FOF
 
 /**
+ * @brief BH-carried fields for the FoF scheme.
+ * Used only by ECHOES.
+ */
+struct fof_galaxy_data {
+  /*! Sum of masses of gas particles in the galaxy */
+  float gas_mass;
+
+  /*! Particle group ID */
+  size_t group_id;
+
+  /*! Size of the FOF group of this particle */
+  size_t group_size;
+};
+
+/**
  * @brief Particle-carried fields for the FoF scheme.
  */
 struct fof_gpart_data {
@@ -42,6 +57,12 @@ struct fof_gpart_data {
  * @brief Particle-carried fields for the FoF scheme.
  */
 struct fof_gpart_data {};
+
+/**
+ * @brief BH-carried fields for the FoF scheme.
+ * Used only by ECHOES.
+ */
+struct fof_galaxy_data {};
 
 #endif
 

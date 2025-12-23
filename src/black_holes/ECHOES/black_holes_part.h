@@ -22,6 +22,7 @@
 #include "chemistry_struct.h"
 #include "particle_splitting_struct.h"
 #include "timeline.h"
+#include "fof_struct.h"
 
 /**
  * @brief Particle fields for the black hole particles.
@@ -103,6 +104,8 @@ struct bpart {
   /*! List of interacting particles in the force SELF and PAIR */
   long long ids_ngbs_force[MAX_NUM_OF_NEIGHBOURS_BLACK_HOLES];
 #endif
+
+  struct fof_galaxy_data fof_galaxy_data;
 
 } SWIFT_STRUCT_ALIGN;
 

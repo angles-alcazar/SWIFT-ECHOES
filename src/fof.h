@@ -26,6 +26,7 @@
 #include "align.h"
 #include "parser.h"
 #include "part_type.h"
+#include "part.h"
 
 /* Avoid cyclic inclusions */
 struct cell;
@@ -230,6 +231,8 @@ void rec_fof_attach_pair(const struct fof_props *props, const double dim[3],
 void fof_free_arrays(struct fof_props *props);
 void fof_struct_dump(const struct fof_props *props, FILE *stream);
 void fof_struct_restore(struct fof_props *props, FILE *stream);
+void fof_first_init_bpart(struct bpart *bpart);
+void fof_set_black_holes_info(const struct fof_props *props, const struct black_holes_props *bh_props, const struct phys_const *constants, const struct cosmology *cosmo, struct space *s);
 
 #ifdef WITH_MPI
 /* MPI data type for the particle transfers */
