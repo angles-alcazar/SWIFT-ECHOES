@@ -12,7 +12,7 @@ EOF
 
 PARMETIS=/mnt/home/ssutherland/codes/libs/parmetis/
 ONETBB=/mnt/home/ssutherland/codes/libs/oneTBB/
-FLAGS="--enable-fof --with-black-holes=ECHOES --enable-optimizations=no --with-hydro=sphenix --with-parmetis=${PARMETIS} --with-tbbmalloc=${ONETBB}"
+FLAGS="--enable-fof --with-black-holes=ECHOES --enable-optimization=no --with-hydro=sphenix --with-parmetis=${PARMETIS} --with-tbbmalloc=${ONETBB}"
 
 for a in "$@"; do
     case $a in
@@ -20,7 +20,7 @@ for a in "$@"; do
             FLAGS="$FLAGS --enable-debug=yes --enable-debugging-checks"
             ;;
         -o|--opt)
-            FLAGS="$FLAGS --enable-optimizations=yes --with-gcc-arch=native"
+            FLAGS="$FLAGS --enable-optimization=yes --with-gcc-arch=native"
             ;;
         -h|--help)
             usage
