@@ -27,6 +27,7 @@ for a in "$@"; do
             exit 2
             ;;
         *)
+            FLAGS="$FLAGS $a"
             ;;
     esac
 done
