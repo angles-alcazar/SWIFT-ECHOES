@@ -127,51 +127,61 @@ INLINE static void black_holes_write_particles(const struct bpart* bparts,
                                                struct io_props* list,
                                                int* num_fields,
                                                int with_cosmology) {
-
-  /* Say how much we want to write */
-  *num_fields = 6;
+  int num = 0;
 
   /* List what we want to write */
-  list[0] = io_make_output_field_convert_bpart(
+  list[num++] = io_make_output_field_convert_bpart(
       "Coordinates", DOUBLE, 3, UNIT_CONV_LENGTH, 1.f, bparts,
       convert_bpart_pos, "Co-moving position of the particles");
 
-  list[1] = io_make_output_field_convert_bpart(
+  list[num++] = io_make_output_field_convert_bpart(
       "Velocities", FLOAT, 3, UNIT_CONV_SPEED, 0.f, bparts, convert_bpart_vel,
       "Peculiar velocities of the particles. This is a * dx/dt where x is the "
       "co-moving position of the particles.");
 
-  list[2] = io_make_output_field("Masses", FLOAT, 1, UNIT_CONV_MASS, 0.f,
+  list[num++] = io_make_output_field("Masses", FLOAT, 1, UNIT_CONV_MASS, 0.f,
                                  bparts, mass, "Masses of the particles");
 
-  list[3] = io_make_physical_output_field(
+  list[num++] = io_make_physical_output_field(
       "ParticleIDs", ULONGLONG, 1, UNIT_CONV_NO_UNITS, 0.f, bparts, id,
       /*can convert to comoving=*/0, "Unique ID of the particles");
 
-  list[4] = io_make_output_field(
+  list[num++] = io_make_output_field(
       "SmoothingLengths", FLOAT, 1, UNIT_CONV_LENGTH, 1.f, bparts, h,
       "Co-moving smoothing lengths (FWHM of the kernel) of the particles");
 
-  list[5] = io_make_output_field_convert_bpart(
+  list[num++] = io_make_output_field_convert_bpart(
       "Potentials", FLOAT, 1, UNIT_CONV_POTENTIAL, -1.f, bparts,
       convert_bpart_potential, "Gravitational potentials of the particles");
 
+  list[num++] = io_make_physical_output_field(
+      "CumulativeNumberOfSeeds", INT, 1, UNIT_CONV_NO_UNITS, 0.f, bparts,
+      cumulative_number_of_seeds, /*can convert to comoving=*/0,
+      "Total number of BH seeds that have merged into this black hole");
+
+  list[num++] = io_make_physical_output_field(
+      "NumberOfMergers", INT, 1, UNIT_CONV_NO_UNITS, 0.f, bparts,
+      number_of_mergers, /*can convert to comoving=*/1,
+      "Number of mergers the black holes went through. "
+      "This does not include the number of mergers "
+      "accumulated by any merged black hole.");
+
 #ifdef DEBUG_INTERACTIONS_BLACK_HOLES
 
-  list += *num_fields;
-  *num_fields += 4;
-
-  list[0] = io_make_output_field("Num_ngb_density", INT, 1, UNIT_CONV_NO_UNITS,
+  list[num++] = io_make_output_field("Num_ngb_density", INT, 1, UNIT_CONV_NO_UNITS,
                                  bparts, num_ngb_density);
-  list[1] = io_make_output_field("Num_ngb_force", INT, 1, UNIT_CONV_NO_UNITS,
+  list[num++] = io_make_output_field("Num_ngb_force", INT, 1, UNIT_CONV_NO_UNITS,
                                  bparts, num_ngb_force);
-  list[2] = io_make_output_field("Ids_ngb_density", LONGLONG,
+  list[num++] = io_make_output_field("Ids_ngb_density", LONGLONG,
                                  MAX_NUM_OF_NEIGHBOURS_BLACK_HOLES,
                                  UNIT_CONV_NO_UNITS, bparts, ids_ngbs_density);
-  list[3] = io_make_output_field("Ids_ngb_force", LONGLONG,
+  list[num++] = io_make_output_field("Ids_ngb_force", LONGLONG,
                                  MAX_NUM_OF_NEIGHBOURS_BLACK_HOLES,
                                  UNIT_CONV_NO_UNITS, bparts, ids_ngbs_force);
 #endif
+
+  /* Say how much we want to write */
+  *num_fields = num;
 }
 
 #endif /* SWIFT_ECHOES_BLACK_HOLES_IO_H */
