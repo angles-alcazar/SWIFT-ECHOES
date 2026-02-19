@@ -22,6 +22,12 @@
 #include "chemistry.h"
 #include "hydro_properties.h"
 
+#include <string.h>
+
+enum BH_merger_threshold {
+  BH_mergers_escape_velocity, /* TODO: some insightful description */
+};
+
 /**
  * @brief Properties of the black hole scheme.
  *
@@ -50,6 +56,12 @@ struct black_holes_props {
 
   /*! Use nibbling? (Always set to 0 in the default model) */
   int use_nibbling;
+
+  /*! Maximal distance over which BHs merge, in units of softening length */
+  float max_merging_distance_ratio;
+
+  /* Which criterion for black hole mergers are we using? */
+  enum BH_merger_threshold merger_threshold_type;
 };
 
 /**
@@ -101,6 +113,17 @@ static INLINE void black_holes_props_init(struct black_holes_props *bp,
 
   /* No nibbling in this default model! */
   bp->use_nibbling = 0;
+
+  char temp[40];
+  parser_get_param_string(params, "ECHOES:merger_threshold_type", temp);
+  if (!strcmp(temp, "EscapeVelocity")) {
+    bp->merger_threshold_type = BH_mergers_escape_velocity;
+  } else {
+    error("The BH merger model must be one of EscapeVelocity, not %s", temp);
+  }
+
+  bp->max_merging_distance_ratio =
+      parser_get_param_float(params, "EAGLEAGN:merger_max_distance_ratio");
 }
 
 /**
