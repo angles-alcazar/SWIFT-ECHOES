@@ -46,7 +46,7 @@ struct black_holes_bpart_data {
  * @param p_data The #part's #black_holes_part_data structure.
  */
 __attribute__((always_inline)) INLINE static void
-black_holes_mark_part_as_not_swallowed(struct black_holes_part_data* p_data) {
+black_holes_mark_part_as_not_swallowed(struct black_holes_part_data *p_data) {
 
   /* Nothing to do here: No swallowing in the default model */
 }
@@ -59,7 +59,7 @@ black_holes_mark_part_as_not_swallowed(struct black_holes_part_data* p_data) {
  * @param p_data The #part's black hole data.
  */
 __attribute__((always_inline)) INLINE static void black_holes_init_potential(
-    struct black_holes_part_data* p_data) {}
+    struct black_holes_part_data *p_data) {}
 
 /**
  * @brief Update a given #part's BH data field to mark the particle has
@@ -68,7 +68,7 @@ __attribute__((always_inline)) INLINE static void black_holes_init_potential(
  * @param p_data The #part's #black_holes_part_data structure.
  */
 __attribute__((always_inline)) INLINE static void
-black_holes_mark_part_as_swallowed(struct black_holes_part_data* p_data) {
+black_holes_mark_part_as_swallowed(struct black_holes_part_data *p_data) {
 
   /* Nothing to do here: No swallowing in the default model */
 }
@@ -79,7 +79,7 @@ black_holes_mark_part_as_swallowed(struct black_holes_part_data* p_data) {
  * @param p_data The #part's #black_holes_part_data structure.
  */
 __attribute__((always_inline)) INLINE static long long
-black_holes_get_part_swallow_id(struct black_holes_part_data* p_data) {
+black_holes_get_part_swallow_id(struct black_holes_part_data *p_data) {
 
   /* Return a non-existing ID */
   return -1;
@@ -92,10 +92,10 @@ black_holes_get_part_swallow_id(struct black_holes_part_data* p_data) {
  * @param p_data The #bpart's #black_holes_bpart_data structure.
  */
 __attribute__((always_inline)) INLINE static void
-black_holes_mark_bpart_as_not_swallowed(struct black_holes_bpart_data* p_data) {
+black_holes_mark_bpart_as_not_swallowed(struct black_holes_bpart_data *p_data) {
 
-    p_data->swallow_id = -1;
-    p_data->swallow_mass = 0.f;
+  p_data->swallow_id = -1;
+  p_data->swallow_mass = 0.f;
 }
 
 /**
@@ -105,10 +105,10 @@ black_holes_mark_bpart_as_not_swallowed(struct black_holes_bpart_data* p_data) {
  * @param p_data The #bpart's #black_holes_bpart_data structure.
  */
 __attribute__((always_inline)) INLINE static void
-black_holes_mark_bpart_as_merged(struct black_holes_bpart_data* p_data) {
+black_holes_mark_bpart_as_merged(struct black_holes_bpart_data *p_data) {
 
-    p_data->swallow_id = -2;
-    p_data->swallow_mass = -1.f;
+  p_data->swallow_id = -2;
+  p_data->swallow_mass = -1.f;
 }
 
 /**
@@ -117,9 +117,9 @@ black_holes_mark_bpart_as_merged(struct black_holes_bpart_data* p_data) {
  * @param p_data The #bpart's #black_holes_bpart_data structure.
  */
 __attribute__((always_inline)) INLINE static long long
-black_holes_get_bpart_swallow_id(struct black_holes_bpart_data* p_data) {
+black_holes_get_bpart_swallow_id(struct black_holes_bpart_data *p_data) {
 
-    return p_data->swallow_id;
+  return p_data->swallow_id;
 }
 
 #endif /* SWIFT_BLACK_HOLES_STRUCT_ECHOES_H */

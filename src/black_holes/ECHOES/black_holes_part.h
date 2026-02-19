@@ -20,9 +20,9 @@
 #define SWIFT_ECHOES_BLACK_HOLE_PART_H
 
 #include "chemistry_struct.h"
+#include "fof_struct.h"
 #include "particle_splitting_struct.h"
 #include "timeline.h"
-#include "fof_struct.h"
 
 /**
  * @brief Particle fields for the black hole particles.
@@ -35,7 +35,7 @@ struct bpart {
   long long id;
 
   /*! Pointer to corresponding gravity part. */
-  struct gpart* gpart;
+  struct gpart *gpart;
 
   /*! Particle position. */
   double x[3];
