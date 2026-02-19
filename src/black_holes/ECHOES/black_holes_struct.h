@@ -19,6 +19,9 @@
 #ifndef SWIFT_BLACK_HOLES_STRUCT_ECHOES_H
 #define SWIFT_BLACK_HOLES_STRUCT_ECHOES_H
 
+/* Local includes */
+#include "inline.h"
+
 /**
  * @brief Black holes-related fields carried by each *gas* particle.
  */
@@ -91,7 +94,8 @@ black_holes_get_part_swallow_id(struct black_holes_part_data* p_data) {
 __attribute__((always_inline)) INLINE static void
 black_holes_mark_bpart_as_not_swallowed(struct black_holes_bpart_data* p_data) {
 
-  /* Nothing to do here: No merging in the default model */
+    p_data->swallow_id = -1;
+    p_data->swallow_mass = 0.f;
 }
 
 /**
@@ -103,7 +107,8 @@ black_holes_mark_bpart_as_not_swallowed(struct black_holes_bpart_data* p_data) {
 __attribute__((always_inline)) INLINE static void
 black_holes_mark_bpart_as_merged(struct black_holes_bpart_data* p_data) {
 
-  /* Nothing to do here: No merging in the default model */
+    p_data->swallow_id = -2;
+    p_data->swallow_mass = -1.f;
 }
 
 /**
@@ -114,8 +119,7 @@ black_holes_mark_bpart_as_merged(struct black_holes_bpart_data* p_data) {
 __attribute__((always_inline)) INLINE static long long
 black_holes_get_bpart_swallow_id(struct black_holes_bpart_data* p_data) {
 
-  /* Return a non-existing ID */
-  return -1;
+    return p_data->swallow_id;
 }
 
 #endif /* SWIFT_BLACK_HOLES_STRUCT_ECHOES_H */
