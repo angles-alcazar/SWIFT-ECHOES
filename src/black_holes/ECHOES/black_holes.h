@@ -370,6 +370,9 @@ INLINE static void black_holes_create_from_gas(
     /* It's just a baby! No mergers yet. */
     bp->number_of_mergers = 0;
 
+    /* Likewise it's not been swallowed yet either */
+    black_holes_mark_bpart_as_not_swallowed(&bp->merger_data);
+
   /* First initialisation */
   black_holes_init_bpart(bp);
 }
