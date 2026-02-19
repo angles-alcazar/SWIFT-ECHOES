@@ -107,6 +107,12 @@ struct bpart {
 
   struct fof_galaxy_data fof_galaxy_data;
 
+  /* Number of BH mergers this particular particle has experienced. */
+  int number_of_mergers;
+
+  /* Total number of BHs which have merged to form this BH. */
+  int cumulative_number_of_seeds;
+
 } SWIFT_STRUCT_ALIGN;
 
 #endif /* SWIFT_ECHOES_BLACK_HOLE_PART_H */

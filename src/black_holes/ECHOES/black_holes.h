@@ -239,7 +239,27 @@ __attribute__((always_inline)) INLINE static void black_holes_swallow_bpart(
     const double time, const int with_cosmology,
     const struct black_holes_props* props, const struct phys_const* constants) {
 
-  /* Nothing to do here: No merging in the default model */
+    float bpi_mass = bpi->mass;
+    float bpj_mass = bpj->mass;
+
+    /* Update mass */
+    bpi->mass += bpj_mass;
+    bpi->gpart->mass += bpj_mass;
+
+    /* Conservation of momentum */
+    const float BH_mom[3] = {bpi_mass * bpi->v[0] + bpj_mass * bpj->v[0],
+                             bpi_mass * bpi->v[1] + bpj_mass * bpj->v[1],
+                             bpi_mass * bpi->v[2] + bpj_mass * bpj->v[2]};
+
+    bpi->v[0] = BH_mom[0] / bpi->mass;
+    bpi->v[1] = BH_mom[1] / bpi->mass;
+    bpi->v[2] = BH_mom[2] / bpi->mass;
+    bpi->gpart->v_full[0] = bpi->v[0];
+    bpi->gpart->v_full[1] = bpi->v[1];
+    bpi->gpart->v_full[2] = bpi->v[2];
+
+    bpi->number_of_mergers++;
+    bpi->cumulative_number_of_seeds += bpj->cumulative_number_of_seeds;
 }
 
 /**
@@ -343,6 +363,12 @@ INLINE static void black_holes_create_from_gas(
     const struct phys_const* constants, const struct cosmology* cosmo,
     const struct part* p, const struct xpart* xp,
     const integertime_t ti_current) {
+
+    /* The BH itself is its only seed. */
+    bp->cumulative_number_of_seeds = 1;
+
+    /* It's just a baby! No mergers yet. */
+    bp->number_of_mergers = 0;
 
   /* First initialisation */
   black_holes_init_bpart(bp);
