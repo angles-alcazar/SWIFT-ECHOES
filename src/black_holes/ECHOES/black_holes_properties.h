@@ -123,7 +123,7 @@ static INLINE void black_holes_props_init(struct black_holes_props *bp,
   }
 
   bp->max_merging_distance_ratio =
-      parser_get_param_float(params, "EAGLEAGN:merger_max_distance_ratio");
+      parser_get_param_float(params, "ECHOES:merger_max_distance_ratio");
 }
 
 /**
