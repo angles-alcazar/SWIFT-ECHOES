@@ -19,13 +19,20 @@
 #ifndef SWIFT_BLACK_HOLES_STRUCT_ECHOES_H
 #define SWIFT_BLACK_HOLES_STRUCT_ECHOES_H
 
+/* Standard headers */
+#include <float.h>
+
 /* Local includes */
 #include "inline.h"
 
 /**
  * @brief Black holes-related fields carried by each *gas* particle.
  */
-struct black_holes_part_data {};
+struct black_holes_part_data {
+
+  /*! Gravitational potential of the particle (for repositioning) */
+  float potential;
+};
 
 /**
  * @brief Black holes-related fields carried by each *BH* particle.
@@ -54,12 +61,12 @@ black_holes_mark_part_as_not_swallowed(struct black_holes_part_data *p_data) {
 /**
  * @brief Reset the particle-carried potential at the start of a time-step.
  *
- * Nothing to do here.
- *
  * @param p_data The #part's black hole data.
  */
 __attribute__((always_inline)) INLINE static void black_holes_init_potential(
-    struct black_holes_part_data *p_data) {}
+    struct black_holes_part_data *p_data) {
+    p_data->potential = FLT_MAX;
+}
 
 /**
  * @brief Update a given #part's BH data field to mark the particle has

@@ -26,8 +26,10 @@
 #include "black_holes_struct.h"
 #include "cooling_properties.h"
 #include "dimension.h"
+#include "gravity.h"
 #include "kernel_hydro.h"
 #include "minmax.h"
+#include "random.h"
 
 /**
  * @brief Computes the time-step of a given black hole particle.
@@ -74,6 +76,11 @@ __attribute__((always_inline)) INLINE static void black_holes_init_bpart(
 
   bp->density.wcount = 0.f;
   bp->density.wcount_dh = 0.f;
+  bp->reposition.delta_x[0] = -FLT_MAX;
+  bp->reposition.delta_x[1] = -FLT_MAX;
+  bp->reposition.delta_x[2] = -FLT_MAX;
+  bp->reposition.min_potential = FLT_MAX;
+  bp->reposition.potential = FLT_MAX;
 }
 
 /**
@@ -83,7 +90,51 @@ __attribute__((always_inline)) INLINE static void black_holes_init_bpart(
  * @param dt_drift The drift time-step for positions.
  */
 __attribute__((always_inline)) INLINE static void black_holes_predict_extra(
-    struct bpart *restrict bp, float dt_drift) {}
+    struct bpart *restrict bp, float dt_drift) {
+  /* sutherland: This seems to be where the repositioning happens. */
+
+  /* Quit early if we're not repositioning */
+  if (bp->reposition.min_potential == FLT_MAX) return;
+
+#ifdef SWIFT_DEBUG_CHECKS
+  if (bp->reposition.delta_x[0] == -FLT_MAX ||
+      bp->reposition.delta_x[1] == -FLT_MAX ||
+      bp->reposition.delta_x[2] == -FLT_MAX) {
+    error("Something went wrong with the new repositioning position");
+  }
+
+  const double dx = bp->reposition.delta_x[0];
+  const double dy = bp->reposition.delta_x[1];
+  const double dz = bp->reposition.delta_x[2];
+  const double d = sqrt(dx * dx + dy * dy + dz * dz);
+  if (d > 1.01 * kernel_gamma * bp->h)
+    error("Repositioning BH beyond the kernel support!");
+#endif
+
+  /* Move the black hole */
+  bp->x[0] += bp->reposition.delta_x[0];
+  bp->x[1] += bp->reposition.delta_x[1];
+  bp->x[2] += bp->reposition.delta_x[2];
+
+  /* Move its gravity properties as well */
+  bp->gpart->x[0] += bp->reposition.delta_x[0];
+  bp->gpart->x[1] += bp->reposition.delta_x[1];
+  bp->gpart->x[2] += bp->reposition.delta_x[2];
+
+  /* Store the delta position */
+  bp->x_diff[0] -= bp->reposition.delta_x[0];
+  bp->x_diff[1] -= bp->reposition.delta_x[1];
+  bp->x_diff[2] -= bp->reposition.delta_x[2];
+
+  /* Reset the reposition variables */
+  bp->reposition.delta_x[0] = -FLT_MAX;
+  bp->reposition.delta_x[1] = -FLT_MAX;
+  bp->reposition.delta_x[2] = -FLT_MAX;
+  bp->reposition.min_potential = FLT_MAX;
+
+  /* Count the jump */
+  bp->number_of_repositions++;
+}
 
 /**
  * @brief Sets the values to be predicted in the drifts to their values at a
@@ -288,7 +339,7 @@ __attribute__((always_inline)) INLINE static void black_holes_prepare_feedback(
 /**
  * @brief Finish the calculation of the new BH position.
  *
- * Nothing to do here.
+ * Here, we check that the BH should indeed be moved in the next drift.
  *
  * @param bp The black hole particle.
  * @param props The properties of the black hole scheme.
@@ -300,7 +351,57 @@ __attribute__((always_inline)) INLINE static void black_holes_prepare_feedback(
 __attribute__((always_inline)) INLINE static void black_holes_end_reposition(
     struct bpart *restrict bp, const struct black_holes_props *props,
     const struct phys_const *constants, const struct cosmology *cosmo,
-    const double dt, const integertime_t ti_begin) {}
+    const double dt, const integertime_t ti_begin) {
+
+  /* sutherland TODO: EAGLE has a maximum mass at which repositions happen */
+
+  /* First check: did we find any eligible neighbour particle to jump to? */
+  if (bp->reposition.min_potential == FLT_MAX) return;
+
+  /* Record that we have a (possible) repositioning situation */
+  bp->number_of_reposition_attempts++;
+
+  /* Is the potential lower (i.e. the BH is at the bottom already) */
+  const float potential = gravity_get_comoving_potential(bp->gpart);
+  if (potential < bp->reposition.min_potential) {
+
+    /* No need to reposition */
+    bp->reposition.min_potential = FLT_MAX;
+    bp->reposition.delta_x[0] = -FLT_MAX;
+    bp->reposition.delta_x[1] = -FLT_MAX;
+    bp->reposition.delta_x[2] = -FLT_MAX;
+
+  } else {
+    /* We _should_ reposition, but not fractionally. Here, we will
+     * reposition exactly on top of another gas particle - which
+     * could cause issues, so we add on a small fractional offset
+     * of magnitude 0.001 h in the reposition delta. */
+
+    /* Generate three random numbers in the interval [-0.5, 0.5]; id,
+     * id**2, and id**3 are required to give unique random numbers (as
+     * random_unit_interval is completely reproducible). */
+    const float offset_dx =
+        random_unit_interval(bp->id, ti_begin, random_number_BH_reposition) -
+        0.5f;
+    const float offset_dy = random_unit_interval(bp->id * bp->id, ti_begin,
+                                                 random_number_BH_reposition) -
+                            0.5f;
+    const float offset_dz =
+        random_unit_interval(bp->id * bp->id * bp->id, ti_begin,
+                             random_number_BH_reposition) -
+        0.5f;
+
+    const float length_inv =
+        1.0f / sqrtf(offset_dx * offset_dx + offset_dy * offset_dy +
+                     offset_dz * offset_dz);
+
+    const float norm = 0.001f * bp->h * length_inv;
+
+    bp->reposition.delta_x[0] += offset_dx * norm;
+    bp->reposition.delta_x[1] += offset_dy * norm;
+    bp->reposition.delta_x[2] += offset_dz * norm;
+  }
+}
 
 /**
  * @brief Reset acceleration fields of a particle
@@ -325,27 +426,31 @@ __attribute__((always_inline)) INLINE static void black_holes_reset_feedback(
  * @brief Store the gravitational potential of a black hole by copying it from
  * its #gpart friend.
  *
- * Nothing to do here.
- *
  * @param bp The black hole particle.
  * @param gp The black hole's #gpart.
  */
 __attribute__((always_inline)) INLINE static void
 black_holes_store_potential_in_bpart(struct bpart *bp, const struct gpart *gp) {
+
+#ifdef SWIFT_DEBUG_CHECKS
+  if (bp->gpart != gp) error("Copying potential to the wrong black hole!");
+#endif
+
+  bp->reposition.potential = gp->potential;
 }
 
 /**
  * @brief Store the gravitational potential of a particle by copying it from
  * its #gpart friend.
  *
- * Nothing to do here.
- *
  * @param p_data The black hole data of a gas particle.
  * @param gp The black hole's #gpart.
  */
 __attribute__((always_inline)) INLINE static void
 black_holes_store_potential_in_part(struct black_holes_part_data *p_data,
-                                    const struct gpart *gp) {}
+                                    const struct gpart *gp) {
+  p_data->potential = gp->potential;
+}
 
 /**
  * @brief Initialise a BH particle that has just been seeded.

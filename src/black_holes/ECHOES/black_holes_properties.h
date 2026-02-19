@@ -60,6 +60,9 @@ struct black_holes_props {
   /*! Maximal distance over which BHs merge, in units of softening length */
   float max_merging_distance_ratio;
 
+  /*! Maximal distance to reposition, in units of softening length */
+  float max_reposition_distance_ratio;
+
   /* Which criterion for black hole mergers are we using? */
   enum BH_merger_threshold merger_threshold_type;
 };
@@ -124,6 +127,8 @@ static INLINE void black_holes_props_init(struct black_holes_props *bp,
 
   bp->max_merging_distance_ratio =
       parser_get_param_float(params, "ECHOES:merger_max_distance_ratio");
+  bp->max_reposition_distance_ratio =
+      parser_get_param_float(params, "EAGLEAGN:max_reposition_distance_ratio");
 }
 
 /**

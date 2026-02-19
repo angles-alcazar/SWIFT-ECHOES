@@ -68,6 +68,19 @@ struct bpart {
 
   } density;
 
+  struct {
+
+    /*! Gravitational potential copied from the #gpart. */
+    float potential;
+
+    /*! Value of the minimum potential across all neighbours. */
+    float min_potential;
+
+    /*! Delta position to apply after the reposition procedure */
+    double delta_x[3];
+
+  } reposition;
+
   /*! Splitting structure */
   struct particle_splitting_data split_data;
 
@@ -112,6 +125,15 @@ struct bpart {
 
   /* Total number of BHs which have merged to form this BH. */
   int cumulative_number_of_seeds;
+
+  /*! Total number of times the black hole has been repositioned (excluding
+   * repositionings of merged-in black holes) */
+  int number_of_repositions;
+
+  /*! Total number of times a black hole attempted repositioning (including
+   * cases where it was aborted because the black hole was already at a
+   * lower potential than all eligible neighbours) */
+  int number_of_reposition_attempts;
 
 } SWIFT_STRUCT_ALIGN;
 

@@ -104,7 +104,36 @@ runner_iact_nonsym_bh_gas_repos(
     const struct gravity_props *grav_props,
     const struct black_holes_props *bh_props,
     const struct entropy_floor_properties *floor_props,
-    const integertime_t ti_current, const double time) {}
+    const integertime_t ti_current, const double time) {
+
+  /* sutherland TODO: implement conditions on repositioning.
+   * EAGLE has a velocity condition based on the sound speed, but we don't have
+   * that sort of physics implemented yet.
+   * EAGLE also has the option to negate the BH's own contribution to the
+   * potential when determining the deepest gas particle. */
+
+  const float max_dist_repos2 =
+      kernel_gravity_softening_plummer_equivalent_inv *
+      kernel_gravity_softening_plummer_equivalent_inv *
+      bh_props->max_reposition_distance_ratio *
+      bh_props->max_reposition_distance_ratio * grav_props->epsilon_baryon_cur *
+      grav_props->epsilon_baryon_cur;
+
+  /* Are we too far away? */
+  if (r2 >= max_dist_repos2) return;
+
+  float potential = pj->black_holes_data.potential;
+
+  /* Is the potential lower? */
+  if (potential < bi->reposition.min_potential) {
+
+    /* Store this as our new best */
+    bi->reposition.min_potential = potential;
+    bi->reposition.delta_x[0] = -dx[0];
+    bi->reposition.delta_x[1] = -dx[1];
+    bi->reposition.delta_x[2] = -dx[2];
+  }
+}
 
 /**
  * @brief Swallowing interaction between two particles (non-symmetric).
@@ -158,7 +187,37 @@ runner_iact_nonsym_bh_bh_repos(const float r2, const float dx[3],
                                const struct cosmology *cosmo,
                                const struct gravity_props *grav_props,
                                const struct black_holes_props *bh_props,
-                               const integertime_t ti_current) {}
+                               const integertime_t ti_current) {
+
+  /* sutherland TODO: implement conditions on repositioning.
+   * EAGLE has a velocity condition based on the sound speed, but we don't have
+   * that sort of physics implemented yet.
+   * EAGLE also has the option to negate the BH's own contribution to the
+   * potential when determining the deepest gas particle. */
+
+  /* (Square of) Max repositioning distance allowed based on the softening */
+  const float max_dist_repos2 =
+      kernel_gravity_softening_plummer_equivalent_inv *
+      kernel_gravity_softening_plummer_equivalent_inv *
+      bh_props->max_reposition_distance_ratio *
+      bh_props->max_reposition_distance_ratio * grav_props->epsilon_baryon_cur *
+      grav_props->epsilon_baryon_cur;
+
+  /* Are we too far away? */
+  if (r2 >= max_dist_repos2) return;
+
+  float potential = bj->reposition.potential;
+
+  /* Is the potential lower? */
+  if (potential < bi->reposition.min_potential) {
+
+    /* Store this as our new best */
+    bi->reposition.min_potential = potential;
+    bi->reposition.delta_x[0] = -dx[0];
+    bi->reposition.delta_x[1] = -dx[1];
+    bi->reposition.delta_x[2] = -dx[2];
+  }
+}
 
 /**
  * @brief Swallowing interaction between two BH particles (non-symmetric).

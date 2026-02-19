@@ -166,6 +166,23 @@ INLINE static void black_holes_write_particles(const struct bpart *bparts,
       "This does not include the number of mergers "
       "accumulated by any merged black hole.");
 
+  list[num++] = io_make_physical_output_field(
+      "NumberOfRepositions", INT, 1, UNIT_CONV_NO_UNITS, 0.f, bparts,
+      number_of_repositions, /*can convert to comoving=*/1,
+      "Number of repositioning events the black holes went through. This does "
+      "not include the number of reposition events accumulated by any merged "
+      "black holes.");
+
+  list[num++] = io_make_physical_output_field(
+      "NumberOfRepositionAttempts", INT, 1, UNIT_CONV_NO_UNITS, 0.f, bparts,
+      number_of_reposition_attempts, /*can convert to comoving=*/1,
+      "Number of time steps in which the black holes had an eligible particle "
+      "to reposition to. They may or may not have ended up moving there, "
+      "depending on their subgrid mass and on whether these particles were at "
+      "a lower or higher potential than the black holes themselves. It does "
+      "not include attempted repositioning events accumulated by any merged "
+      "black holes.");
+
 #ifdef DEBUG_INTERACTIONS_BLACK_HOLES
 
   list[num++] = io_make_output_field(
