@@ -408,8 +408,10 @@ void space_first_init_bparts_mapper(void *restrict map_data, int count,
 
     black_holes_first_init_bpart(&bp[k], props);
 
+#ifdef WITH_FOF
     /* Initialize galaxy data */
     fof_first_init_bpart(&bp[k]);
+#endif
 
     /* And the tracers */
     tracers_first_init_bpart(&bp[k], us, phys_const, cosmo);
