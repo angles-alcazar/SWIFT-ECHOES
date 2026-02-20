@@ -4146,6 +4146,8 @@ void fof_set_black_holes_info(const struct fof_props *props,
      * smsutherland: These are particles that may not really exist anymore. 
      * Their gpart link may be broken.*/
     if (bparts[i].time_bin >= time_bin_inhibited) continue;
+    /* Skip BHs that are somehow not a part of a group. */
+    if (bparts[i].gpart->fof_data.group_id == props->group_id_default) continue;
 
     const size_t index = bparts[i].gpart->fof_data.group_id - 1;
     bparts[i].fof_galaxy_data.group_size = bparts[i].gpart->fof_data.group_size;
