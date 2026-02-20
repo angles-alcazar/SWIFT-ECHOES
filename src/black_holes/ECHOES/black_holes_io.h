@@ -152,6 +152,10 @@ INLINE static void black_holes_write_particles(const struct bpart *bparts,
                            fof_galaxy_data.group_mass,
                            "Masses of all particles in the host FOF group.");
 
+  list[num++] = io_make_output_field(
+      "MaxGroupMasses", FLOAT, 1, UNIT_CONV_MASS, 0.f, bparts,
+      fof_galaxy_data.max_group_mass, "Maximum reached group mass.");
+
   list[num++] = io_make_physical_output_field(
       "ParticleIDs", ULONGLONG, 1, UNIT_CONV_NO_UNITS, 0.f, bparts, id,
       /*can convert to comoving=*/0, "Unique ID of the particles");

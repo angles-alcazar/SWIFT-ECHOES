@@ -33,6 +33,9 @@ struct fof_galaxy_data {
   /*! Sum of masses of all particles in the galaxy */
   float group_mass;
 
+  /*! Maximum group mass ever reached by the galaxy */
+  float max_group_mass;
+
   /*! Sum of masses of gas particles in the galaxy */
   float group_gas_mass;
 
