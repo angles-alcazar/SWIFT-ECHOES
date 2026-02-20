@@ -4148,6 +4148,11 @@ void fof_set_black_holes_info(const struct fof_props *props,
   size_t nr_bparts = s->nr_bparts;
 
   for (size_t i = 0; i < nr_bparts; i++) {
+    /* Ignore inhibited particles.
+     * smsutherland: These are particles that may not really exist anymore. 
+     * Their gpart link may be broken.*/
+    if (bparts[i].time_bin >= time_bin_inhibited) continue;
+
     bparts[i].fof_galaxy_data.group_id = bparts[i].gpart->fof_data.group_id;
     bparts[i].fof_galaxy_data.group_size = bparts[i].gpart->fof_data.group_size;
   }
