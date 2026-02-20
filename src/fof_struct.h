@@ -32,9 +32,6 @@ struct fof_galaxy_data {
   /*! Sum of masses of gas particles in the galaxy */
   float gas_mass;
 
-  /*! Particle group ID */
-  size_t group_id;
-
   /*! Size of the FOF group of this particle */
   size_t group_size;
 };

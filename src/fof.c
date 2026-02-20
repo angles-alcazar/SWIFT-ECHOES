@@ -4147,7 +4147,9 @@ void fof_set_black_holes_info(const struct fof_props *props,
      * Their gpart link may be broken.*/
     if (bparts[i].time_bin >= time_bin_inhibited) continue;
 
+    const size_t index = bparts[i].gpart->fof_data.group_id - 1;
     bparts[i].fof_galaxy_data.group_size = bparts[i].gpart->fof_data.group_size;
+    bparts[i].fof_galaxy_data.gas_mass = props->group_gas_mass[index];
   }
 #endif /* BLACK_HOLES_ECHOES */
 }
