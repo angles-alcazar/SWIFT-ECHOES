@@ -4128,7 +4128,7 @@ void fof_struct_restore(struct fof_props *props, FILE *stream) {
 
 void fof_first_init_bpart(struct bpart *bpart) {
 #ifdef BLACK_HOLES_ECHOES
-  bpart->fof_galaxy_data.gas_mass = 0.f;
+  bpart->fof_galaxy_data.group_gas_mass = 0.f;
   bpart->fof_galaxy_data.group_size = 0;
 #endif
 }
@@ -4149,7 +4149,8 @@ void fof_set_black_holes_info(const struct fof_props *props,
 
     const size_t index = bparts[i].gpart->fof_data.group_id - 1;
     bparts[i].fof_galaxy_data.group_size = bparts[i].gpart->fof_data.group_size;
-    bparts[i].fof_galaxy_data.gas_mass = props->group_gas_mass[index];
+    bparts[i].fof_galaxy_data.group_gas_mass = props->group_gas_mass[index];
+    bparts[i].fof_galaxy_data.group_mass = props->group_mass[index];
   }
 #endif /* BLACK_HOLES_ECHOES */
 }

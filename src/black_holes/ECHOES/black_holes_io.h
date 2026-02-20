@@ -144,8 +144,13 @@ INLINE static void black_holes_write_particles(const struct bpart *bparts,
 
   list[num++] =
       io_make_output_field("GroupGasMasses", FLOAT, 1, UNIT_CONV_MASS, 0.f,
-                           bparts, fof_galaxy_data.gas_mass,
+                           bparts, fof_galaxy_data.group_gas_mass,
                            "Masses of gas particles in the host FOF group.");
+
+  list[num++] =
+      io_make_output_field("GroupMasses", FLOAT, 1, UNIT_CONV_MASS, 0.f, bparts,
+                           fof_galaxy_data.group_mass,
+                           "Masses of all particles in the host FOF group.");
 
   list[num++] = io_make_physical_output_field(
       "ParticleIDs", ULONGLONG, 1, UNIT_CONV_NO_UNITS, 0.f, bparts, id,

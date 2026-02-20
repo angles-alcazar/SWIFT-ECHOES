@@ -21,6 +21,7 @@
 
 /* Config parameters. */
 #include <config.h>
+#include <stddef.h>
 
 #ifdef WITH_FOF
 
@@ -29,8 +30,11 @@
  * Used only by ECHOES.
  */
 struct fof_galaxy_data {
+  /*! Sum of masses of all particles in the galaxy */
+  float group_mass;
+
   /*! Sum of masses of gas particles in the galaxy */
-  float gas_mass;
+  float group_gas_mass;
 
   /*! Size of the FOF group of this particle */
   size_t group_size;
