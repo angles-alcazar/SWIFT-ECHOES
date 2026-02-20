@@ -26,8 +26,10 @@
 #include "black_holes_struct.h"
 #include "cooling_properties.h"
 #include "dimension.h"
+#include "gravity.h"
 #include "kernel_hydro.h"
 #include "minmax.h"
+#include "random.h"
 
 /**
  * @brief Computes the time-step of a given black hole particle.
@@ -37,8 +39,8 @@
  * @param constants The physical constants (in internal units).
  */
 __attribute__((always_inline)) INLINE static float black_holes_compute_timestep(
-    const struct bpart* const bp, const struct black_holes_props* props,
-    const struct phys_const* constants, const struct cosmology* cosmo) {
+    const struct bpart *const bp, const struct black_holes_props *props,
+    const struct phys_const *constants, const struct cosmology *cosmo) {
 
   return FLT_MAX;
 }
@@ -53,7 +55,7 @@ __attribute__((always_inline)) INLINE static float black_holes_compute_timestep(
  * @param props The properties of the black holes model.
  */
 __attribute__((always_inline)) INLINE static void black_holes_first_init_bpart(
-    struct bpart* bp, const struct black_holes_props* props) {
+    struct bpart *bp, const struct black_holes_props *props) {
 
   bp->time_bin = 0;
 }
@@ -64,7 +66,7 @@ __attribute__((always_inline)) INLINE static void black_holes_first_init_bpart(
  * @param bp The particle to act upon
  */
 __attribute__((always_inline)) INLINE static void black_holes_init_bpart(
-    struct bpart* bp) {
+    struct bpart *bp) {
 
 #ifdef DEBUG_INTERACTIONS_BLACK_HOLES
   for (int i = 0; i < MAX_NUM_OF_NEIGHBOURS_STARS; ++i)
@@ -74,6 +76,11 @@ __attribute__((always_inline)) INLINE static void black_holes_init_bpart(
 
   bp->density.wcount = 0.f;
   bp->density.wcount_dh = 0.f;
+  bp->reposition.delta_x[0] = -FLT_MAX;
+  bp->reposition.delta_x[1] = -FLT_MAX;
+  bp->reposition.delta_x[2] = -FLT_MAX;
+  bp->reposition.min_potential = FLT_MAX;
+  bp->reposition.potential = FLT_MAX;
 }
 
 /**
@@ -83,7 +90,51 @@ __attribute__((always_inline)) INLINE static void black_holes_init_bpart(
  * @param dt_drift The drift time-step for positions.
  */
 __attribute__((always_inline)) INLINE static void black_holes_predict_extra(
-    struct bpart* restrict bp, float dt_drift) {}
+    struct bpart *restrict bp, float dt_drift) {
+  /* sutherland: This seems to be where the repositioning happens. */
+
+  /* Quit early if we're not repositioning */
+  if (bp->reposition.min_potential == FLT_MAX) return;
+
+#ifdef SWIFT_DEBUG_CHECKS
+  if (bp->reposition.delta_x[0] == -FLT_MAX ||
+      bp->reposition.delta_x[1] == -FLT_MAX ||
+      bp->reposition.delta_x[2] == -FLT_MAX) {
+    error("Something went wrong with the new repositioning position");
+  }
+
+  const double dx = bp->reposition.delta_x[0];
+  const double dy = bp->reposition.delta_x[1];
+  const double dz = bp->reposition.delta_x[2];
+  const double d = sqrt(dx * dx + dy * dy + dz * dz);
+  if (d > 1.01 * kernel_gamma * bp->h)
+    error("Repositioning BH beyond the kernel support!");
+#endif
+
+  /* Move the black hole */
+  bp->x[0] += bp->reposition.delta_x[0];
+  bp->x[1] += bp->reposition.delta_x[1];
+  bp->x[2] += bp->reposition.delta_x[2];
+
+  /* Move its gravity properties as well */
+  bp->gpart->x[0] += bp->reposition.delta_x[0];
+  bp->gpart->x[1] += bp->reposition.delta_x[1];
+  bp->gpart->x[2] += bp->reposition.delta_x[2];
+
+  /* Store the delta position */
+  bp->x_diff[0] -= bp->reposition.delta_x[0];
+  bp->x_diff[1] -= bp->reposition.delta_x[1];
+  bp->x_diff[2] -= bp->reposition.delta_x[2];
+
+  /* Reset the reposition variables */
+  bp->reposition.delta_x[0] = -FLT_MAX;
+  bp->reposition.delta_x[1] = -FLT_MAX;
+  bp->reposition.delta_x[2] = -FLT_MAX;
+  bp->reposition.min_potential = FLT_MAX;
+
+  /* Count the jump */
+  bp->number_of_repositions++;
+}
 
 /**
  * @brief Sets the values to be predicted in the drifts to their values at a
@@ -92,7 +143,7 @@ __attribute__((always_inline)) INLINE static void black_holes_predict_extra(
  * @param bp The particle.
  */
 __attribute__((always_inline)) INLINE static void
-black_holes_reset_predicted_values(struct bpart* restrict bp) {}
+black_holes_reset_predicted_values(struct bpart *restrict bp) {}
 
 /**
  * @brief Kick the additional variables
@@ -101,7 +152,7 @@ black_holes_reset_predicted_values(struct bpart* restrict bp) {}
  * @param dt The time-step for this kick
  */
 __attribute__((always_inline)) INLINE static void black_holes_kick_extra(
-    struct bpart* bp, float dt) {}
+    struct bpart *bp, float dt) {}
 
 /**
  * @brief Finishes the calculation of density on black holes
@@ -110,7 +161,7 @@ __attribute__((always_inline)) INLINE static void black_holes_kick_extra(
  * @param cosmo The current cosmological model.
  */
 __attribute__((always_inline)) INLINE static void black_holes_end_density(
-    struct bpart* bp, const struct cosmology* cosmo) {
+    struct bpart *bp, const struct cosmology *cosmo) {
 
   /* Some smoothing length multiples. */
   const float h = bp->h;
@@ -131,8 +182,8 @@ __attribute__((always_inline)) INLINE static void black_holes_end_density(
  * @param cosmo The current cosmological model.
  */
 __attribute__((always_inline)) INLINE static void
-black_holes_bpart_has_no_neighbours(struct bpart* restrict bp,
-                                    const struct cosmology* cosmo) {
+black_holes_bpart_has_no_neighbours(struct bpart *restrict bp,
+                                    const struct cosmology *cosmo) {
 
   warning(
       "BH particle with ID %lld treated as having no neighbours (h: %g, "
@@ -157,7 +208,7 @@ black_holes_bpart_has_no_neighbours(struct bpart* restrict bp,
  * @param bp the #bpart.
  */
 __attribute__((always_inline)) INLINE static double
-black_holes_get_accretion_rate(const struct bpart* bp) {
+black_holes_get_accretion_rate(const struct bpart *bp) {
   return 0.;
 }
 
@@ -169,7 +220,7 @@ black_holes_get_accretion_rate(const struct bpart* bp) {
  * @param bp the #bpart.
  */
 __attribute__((always_inline)) INLINE static double
-black_holes_get_accreted_mass(const struct bpart* bp) {
+black_holes_get_accreted_mass(const struct bpart *bp) {
   return 0.;
 }
 
@@ -181,7 +232,7 @@ black_holes_get_accreted_mass(const struct bpart* bp) {
  * @param bp the #bpart.
  */
 __attribute__((always_inline)) INLINE static double
-black_holes_get_subgrid_mass(const struct bpart* bp) {
+black_holes_get_subgrid_mass(const struct bpart *bp) {
   return 0.;
 }
 
@@ -191,8 +242,8 @@ black_holes_get_subgrid_mass(const struct bpart* bp) {
  * @param bp the #bpart.
  */
 __attribute__((always_inline)) INLINE static double
-black_holes_get_bolometric_luminosity(const struct bpart* bp,
-                                      const struct phys_const* constants) {
+black_holes_get_bolometric_luminosity(const struct bpart *bp,
+                                      const struct phys_const *constants) {
   return 0.;
 }
 
@@ -202,7 +253,7 @@ black_holes_get_bolometric_luminosity(const struct bpart* bp,
  * @param bp the #bpart.
  */
 __attribute__((always_inline)) INLINE static double black_holes_get_jet_power(
-    const struct bpart* bp, const struct phys_const* constants) {
+    const struct bpart *bp, const struct phys_const *constants) {
   return 0.;
 }
 
@@ -216,8 +267,8 @@ __attribute__((always_inline)) INLINE static double black_holes_get_jet_power(
  * @param cosmo The current cosmological model.
  */
 __attribute__((always_inline)) INLINE static void black_holes_swallow_part(
-    struct bpart* bp, const struct part* p, const struct xpart* xp,
-    const struct cosmology* cosmo) {
+    struct bpart *bp, const struct part *p, const struct xpart *xp,
+    const struct cosmology *cosmo) {
 
   /* Nothing to do here: No swallowing in the default model */
 }
@@ -235,11 +286,31 @@ __attribute__((always_inline)) INLINE static void black_holes_swallow_part(
  * @param constants The physical constants in internal units.
  */
 __attribute__((always_inline)) INLINE static void black_holes_swallow_bpart(
-    struct bpart* bpi, const struct bpart* bpj, const struct cosmology* cosmo,
+    struct bpart *bpi, const struct bpart *bpj, const struct cosmology *cosmo,
     const double time, const int with_cosmology,
-    const struct black_holes_props* props, const struct phys_const* constants) {
+    const struct black_holes_props *props, const struct phys_const *constants) {
 
-  /* Nothing to do here: No merging in the default model */
+  float bpi_mass = bpi->mass;
+  float bpj_mass = bpj->mass;
+
+  /* Update mass */
+  bpi->mass += bpj_mass;
+  bpi->gpart->mass += bpj_mass;
+
+  /* Conservation of momentum */
+  const float BH_mom[3] = {bpi_mass * bpi->v[0] + bpj_mass * bpj->v[0],
+                           bpi_mass * bpi->v[1] + bpj_mass * bpj->v[1],
+                           bpi_mass * bpi->v[2] + bpj_mass * bpj->v[2]};
+
+  bpi->v[0] = BH_mom[0] / bpi->mass;
+  bpi->v[1] = BH_mom[1] / bpi->mass;
+  bpi->v[2] = BH_mom[2] / bpi->mass;
+  bpi->gpart->v_full[0] = bpi->v[0];
+  bpi->gpart->v_full[1] = bpi->v[1];
+  bpi->gpart->v_full[2] = bpi->v[2];
+
+  bpi->number_of_mergers++;
+  bpi->cumulative_number_of_seeds += bpj->cumulative_number_of_seeds;
 }
 
 /**
@@ -259,16 +330,16 @@ __attribute__((always_inline)) INLINE static void black_holes_swallow_bpart(
  * @param dt The time-step size (in physical internal units).
  */
 __attribute__((always_inline)) INLINE static void black_holes_prepare_feedback(
-    struct bpart* restrict bp, const struct black_holes_props* props,
-    const struct phys_const* constants, const struct cosmology* cosmo,
-    const struct cooling_function_data* cooling,
-    const struct entropy_floor_properties* floor_props, const double time,
+    struct bpart *restrict bp, const struct black_holes_props *props,
+    const struct phys_const *constants, const struct cosmology *cosmo,
+    const struct cooling_function_data *cooling,
+    const struct entropy_floor_properties *floor_props, const double time,
     const int with_cosmology, const double dt, const integertime_t ti_begin) {}
 
 /**
  * @brief Finish the calculation of the new BH position.
  *
- * Nothing to do here.
+ * Here, we check that the BH should indeed be moved in the next drift.
  *
  * @param bp The black hole particle.
  * @param props The properties of the black hole scheme.
@@ -278,9 +349,59 @@ __attribute__((always_inline)) INLINE static void black_holes_prepare_feedback(
  * @param ti_begin The time at the start of the temp
  */
 __attribute__((always_inline)) INLINE static void black_holes_end_reposition(
-    struct bpart* restrict bp, const struct black_holes_props* props,
-    const struct phys_const* constants, const struct cosmology* cosmo,
-    const double dt, const integertime_t ti_begin) {}
+    struct bpart *restrict bp, const struct black_holes_props *props,
+    const struct phys_const *constants, const struct cosmology *cosmo,
+    const double dt, const integertime_t ti_begin) {
+
+  /* sutherland TODO: EAGLE has a maximum mass at which repositions happen */
+
+  /* First check: did we find any eligible neighbour particle to jump to? */
+  if (bp->reposition.min_potential == FLT_MAX) return;
+
+  /* Record that we have a (possible) repositioning situation */
+  bp->number_of_reposition_attempts++;
+
+  /* Is the potential lower (i.e. the BH is at the bottom already) */
+  const float potential = gravity_get_comoving_potential(bp->gpart);
+  if (potential < bp->reposition.min_potential) {
+
+    /* No need to reposition */
+    bp->reposition.min_potential = FLT_MAX;
+    bp->reposition.delta_x[0] = -FLT_MAX;
+    bp->reposition.delta_x[1] = -FLT_MAX;
+    bp->reposition.delta_x[2] = -FLT_MAX;
+
+  } else {
+    /* We _should_ reposition, but not fractionally. Here, we will
+     * reposition exactly on top of another gas particle - which
+     * could cause issues, so we add on a small fractional offset
+     * of magnitude 0.001 h in the reposition delta. */
+
+    /* Generate three random numbers in the interval [-0.5, 0.5]; id,
+     * id**2, and id**3 are required to give unique random numbers (as
+     * random_unit_interval is completely reproducible). */
+    const float offset_dx =
+        random_unit_interval(bp->id, ti_begin, random_number_BH_reposition) -
+        0.5f;
+    const float offset_dy = random_unit_interval(bp->id * bp->id, ti_begin,
+                                                 random_number_BH_reposition) -
+                            0.5f;
+    const float offset_dz =
+        random_unit_interval(bp->id * bp->id * bp->id, ti_begin,
+                             random_number_BH_reposition) -
+        0.5f;
+
+    const float length_inv =
+        1.0f / sqrtf(offset_dx * offset_dx + offset_dy * offset_dy +
+                     offset_dz * offset_dz);
+
+    const float norm = 0.001f * bp->h * length_inv;
+
+    bp->reposition.delta_x[0] += offset_dx * norm;
+    bp->reposition.delta_x[1] += offset_dy * norm;
+    bp->reposition.delta_x[2] += offset_dz * norm;
+  }
+}
 
 /**
  * @brief Reset acceleration fields of a particle
@@ -292,7 +413,7 @@ __attribute__((always_inline)) INLINE static void black_holes_end_reposition(
  * @param bp The particle to act upon
  */
 __attribute__((always_inline)) INLINE static void black_holes_reset_feedback(
-    struct bpart* restrict bp) {
+    struct bpart *restrict bp) {
 
 #ifdef DEBUG_INTERACTIONS_BLACK_HOLES
   for (int i = 0; i < MAX_NUM_OF_NEIGHBOURS_STARS; ++i)
@@ -305,27 +426,31 @@ __attribute__((always_inline)) INLINE static void black_holes_reset_feedback(
  * @brief Store the gravitational potential of a black hole by copying it from
  * its #gpart friend.
  *
- * Nothing to do here.
- *
  * @param bp The black hole particle.
  * @param gp The black hole's #gpart.
  */
 __attribute__((always_inline)) INLINE static void
-black_holes_store_potential_in_bpart(struct bpart* bp, const struct gpart* gp) {
+black_holes_store_potential_in_bpart(struct bpart *bp, const struct gpart *gp) {
+
+#ifdef SWIFT_DEBUG_CHECKS
+  if (bp->gpart != gp) error("Copying potential to the wrong black hole!");
+#endif
+
+  bp->reposition.potential = gp->potential;
 }
 
 /**
  * @brief Store the gravitational potential of a particle by copying it from
  * its #gpart friend.
  *
- * Nothing to do here.
- *
  * @param p_data The black hole data of a gas particle.
  * @param gp The black hole's #gpart.
  */
 __attribute__((always_inline)) INLINE static void
-black_holes_store_potential_in_part(struct black_holes_part_data* p_data,
-                                    const struct gpart* gp) {}
+black_holes_store_potential_in_part(struct black_holes_part_data *p_data,
+                                    const struct gpart *gp) {
+  p_data->potential = gp->potential;
+}
 
 /**
  * @brief Initialise a BH particle that has just been seeded.
@@ -339,10 +464,19 @@ black_holes_store_potential_in_part(struct black_holes_part_data* p_data,
  * @param ti_current the current time on the time-line.
  */
 INLINE static void black_holes_create_from_gas(
-    struct bpart* bp, const struct black_holes_props* props,
-    const struct phys_const* constants, const struct cosmology* cosmo,
-    const struct part* p, const struct xpart* xp,
+    struct bpart *bp, const struct black_holes_props *props,
+    const struct phys_const *constants, const struct cosmology *cosmo,
+    const struct part *p, const struct xpart *xp,
     const integertime_t ti_current) {
+
+  /* The BH itself is its only seed. */
+  bp->cumulative_number_of_seeds = 1;
+
+  /* It's just a baby! No mergers yet. */
+  bp->number_of_mergers = 0;
+
+  /* Likewise it's not been swallowed yet either */
+  black_holes_mark_bpart_as_not_swallowed(&bp->merger_data);
 
   /* First initialisation */
   black_holes_init_bpart(bp);

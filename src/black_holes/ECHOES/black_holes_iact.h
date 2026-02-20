@@ -19,6 +19,14 @@
 #ifndef SWIFT_ECHOES_BH_IACT_H
 #define SWIFT_ECHOES_BH_IACT_H
 
+#include "black_holes_part.h"
+#include "black_holes_properties.h"
+#include "cosmology.h"
+#include "entropy_floor.h"
+#include "gravity_properties.h"
+#include "kernel_gravity.h"
+#include "kernel_hydro.h"
+
 /**
  * @brief Density interaction between two particles (non-symmetric).
  *
@@ -96,7 +104,36 @@ runner_iact_nonsym_bh_gas_repos(
     const struct gravity_props *grav_props,
     const struct black_holes_props *bh_props,
     const struct entropy_floor_properties *floor_props,
-    const integertime_t ti_current, const double time) {}
+    const integertime_t ti_current, const double time) {
+
+  /* sutherland TODO: implement conditions on repositioning.
+   * EAGLE has a velocity condition based on the sound speed, but we don't have
+   * that sort of physics implemented yet.
+   * EAGLE also has the option to negate the BH's own contribution to the
+   * potential when determining the deepest gas particle. */
+
+  const float max_dist_repos2 =
+      kernel_gravity_softening_plummer_equivalent_inv *
+      kernel_gravity_softening_plummer_equivalent_inv *
+      bh_props->max_reposition_distance_ratio *
+      bh_props->max_reposition_distance_ratio * grav_props->epsilon_baryon_cur *
+      grav_props->epsilon_baryon_cur;
+
+  /* Are we too far away? */
+  if (r2 >= max_dist_repos2) return;
+
+  float potential = pj->black_holes_data.potential;
+
+  /* Is the potential lower? */
+  if (potential < bi->reposition.min_potential) {
+
+    /* Store this as our new best */
+    bi->reposition.min_potential = potential;
+    bi->reposition.delta_x[0] = -dx[0];
+    bi->reposition.delta_x[1] = -dx[1];
+    bi->reposition.delta_x[2] = -dx[2];
+  }
+}
 
 /**
  * @brief Swallowing interaction between two particles (non-symmetric).
@@ -150,7 +187,37 @@ runner_iact_nonsym_bh_bh_repos(const float r2, const float dx[3],
                                const struct cosmology *cosmo,
                                const struct gravity_props *grav_props,
                                const struct black_holes_props *bh_props,
-                               const integertime_t ti_current) {}
+                               const integertime_t ti_current) {
+
+  /* sutherland TODO: implement conditions on repositioning.
+   * EAGLE has a velocity condition based on the sound speed, but we don't have
+   * that sort of physics implemented yet.
+   * EAGLE also has the option to negate the BH's own contribution to the
+   * potential when determining the deepest gas particle. */
+
+  /* (Square of) Max repositioning distance allowed based on the softening */
+  const float max_dist_repos2 =
+      kernel_gravity_softening_plummer_equivalent_inv *
+      kernel_gravity_softening_plummer_equivalent_inv *
+      bh_props->max_reposition_distance_ratio *
+      bh_props->max_reposition_distance_ratio * grav_props->epsilon_baryon_cur *
+      grav_props->epsilon_baryon_cur;
+
+  /* Are we too far away? */
+  if (r2 >= max_dist_repos2) return;
+
+  float potential = bj->reposition.potential;
+
+  /* Is the potential lower? */
+  if (potential < bi->reposition.min_potential) {
+
+    /* Store this as our new best */
+    bi->reposition.min_potential = potential;
+    bi->reposition.delta_x[0] = -dx[0];
+    bi->reposition.delta_x[1] = -dx[1];
+    bi->reposition.delta_x[2] = -dx[2];
+  }
+}
 
 /**
  * @brief Swallowing interaction between two BH particles (non-symmetric).
@@ -175,7 +242,72 @@ runner_iact_nonsym_bh_bh_swallow(const float r2, const float dx[3],
                                  const struct cosmology *cosmo,
                                  const struct gravity_props *grav_props,
                                  const struct black_holes_props *bh_props,
-                                 const integertime_t ti_current) {}
+                                 const integertime_t ti_current) {
+
+  /* NOTE:
+   * EAGLE uses the mass of the more massive BH when calculating the escape
+   * velocity. Is this necessary? I would think that we only check the
+   * swallowing BH's mass.  */
+
+  /* Get useful constants */
+  const float G_Newton = grav_props->G_Newton;
+
+  /* (Square of) max swallowing distance allowed based on the softening */
+  const float max_dist_merge2 =
+      kernel_gravity_softening_plummer_equivalent_inv *
+      kernel_gravity_softening_plummer_equivalent_inv *
+      bh_props->max_merging_distance_ratio *
+      bh_props->max_merging_distance_ratio * grav_props->epsilon_baryon_cur *
+      grav_props->epsilon_baryon_cur;
+
+  /* Compute relative velocity */
+  const float delta_v[3] = {
+      bi->v[0] - bj->v[0],
+      bi->v[1] - bj->v[1],
+      bi->v[2] - bj->v[2],
+  };
+  /* |v|^2 */
+  const float v2 = delta_v[0] * delta_v[0] + delta_v[1] * delta_v[1] +
+                   delta_v[2] * delta_v[2];
+  /* Peculiar velocity.
+   * Velocity in SWIFT is (v_pec * a) */
+  const float v2_pec = v2 * cosmo->a2_inv;
+
+  /* If v^2 is below this threshold, the BHs will merge */
+  float v2_threshold;
+  if (bh_props->merger_threshold_type == BH_mergers_escape_velocity) {
+    v2_threshold = 2.f * G_Newton * bi->mass / sqrt(r2);
+  } else {
+    /* Cannot happen! */
+#ifdef SWIFT_DEBUG_CHECKS
+    error("Invalid choice of BH merger threshold type");
+#endif
+    v2_threshold = 0.f;
+  }
+
+  /* If they are close enough and the peculiar velocity is under the escape
+   * velocity threshold. */
+  if ((v2_pec < v2_threshold) && (r2 < max_dist_merge2)) {
+    /* This particle is swallowed by the BH with the largest mass of all the
+     * candidates wanting to swallow it (we use IDs to break ties)*/
+    if ((bj->merger_data.swallow_mass < bi->mass) ||
+        (bj->merger_data.swallow_mass == bi->mass &&
+         bj->merger_data.swallow_id < bi->id)) {
+
+      message("BH %lld wants to swallow BH particle %lld", bi->id, bj->id);
+
+      bj->merger_data.swallow_id = bi->id;
+      bj->merger_data.swallow_mass = bi->mass;
+
+    } else {
+
+      message(
+          "BH %lld wants to swallow gas particle %lld BUT CANNOT (old "
+          "swallow id=%lld)",
+          bi->id, bj->id, bj->merger_data.swallow_id);
+    }
+  }
+}
 
 /**
  * @brief Feedback interaction between two particles (non-symmetric).

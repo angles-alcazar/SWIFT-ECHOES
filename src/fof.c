@@ -19,6 +19,7 @@
 
 /* Config parameters. */
 #include "physical_constants.h"
+
 #include <config.h>
 
 #ifdef WITH_FOF
@@ -4127,29 +4128,40 @@ void fof_struct_restore(struct fof_props *props, FILE *stream) {
 
 void fof_first_init_bpart(struct bpart *bpart) {
 #ifdef BLACK_HOLES_ECHOES
-    bpart->fof_galaxy_data.gas_mass = 0.f;
-    /* smsutherland: This is INCORRECT.
-     * The default group_id is stored in the fof properties.
-     * But we call this from the space initialization code, which doesn't have the fof properties.
-     * This is just a temporary measure, for testing purposes, not actual final code. */
-    bpart->fof_galaxy_data.group_id = 0;
-    bpart->fof_galaxy_data.group_size = 1;
+  bpart->fof_galaxy_data.group_gas_mass = 0.f;
+  bpart->fof_galaxy_data.group_mass = 0.f;
+  bpart->fof_galaxy_data.group_size = 0;
 #endif
 }
 
 void fof_set_black_holes_info(const struct fof_props *props,
                               const struct black_holes_props *bh_props,
                               const struct phys_const *constants,
-                              const struct cosmology *cosmo,
-                              struct space *s) {
+                              const struct cosmology *cosmo, struct space *s) {
 #ifdef BLACK_HOLES_ECHOES
-    struct bpart *bparts = s->bparts;
-    size_t nr_bparts = s->nr_bparts;
+  struct bpart *bparts = s->bparts;
+  size_t nr_bparts = s->nr_bparts;
 
-    for (size_t i = 0; i < nr_bparts; i++) {
-        bparts[i].fof_galaxy_data.group_id = bparts[i].gpart->fof_data.group_id;
-        bparts[i].fof_galaxy_data.group_size = bparts[i].gpart->fof_data.group_size;
+  for (size_t i = 0; i < nr_bparts; i++) {
+    /* Ignore inhibited particles.
+     * smsutherland: These are particles that may not really exist anymore.
+     * Their gpart link may be broken.*/
+    if (bparts[i].time_bin >= time_bin_inhibited) continue;
+    if (bparts[i].gpart->fof_data.group_id == props->group_id_default) {
+        /* BHs that are not in a group have their group data reset
+         * smsutherland TODO: Should this just call fof_first_init_bpart? */
+      bparts[i].fof_galaxy_data.group_size = 0;
+      bparts[i].fof_galaxy_data.group_gas_mass = 0.f;
+      bparts[i].fof_galaxy_data.group_mass = 0.f;
+    } else {
+      const size_t index = bparts[i].gpart->fof_data.group_id - 1;
+
+      bparts[i].fof_galaxy_data.group_size =
+          bparts[i].gpart->fof_data.group_size;
+      bparts[i].fof_galaxy_data.group_gas_mass = props->group_gas_mass[index];
+      bparts[i].fof_galaxy_data.group_mass = props->group_mass[index];
     }
+  }
 #endif /* BLACK_HOLES_ECHOES */
 }
 

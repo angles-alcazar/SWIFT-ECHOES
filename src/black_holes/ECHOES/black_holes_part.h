@@ -20,9 +20,9 @@
 #define SWIFT_ECHOES_BLACK_HOLE_PART_H
 
 #include "chemistry_struct.h"
+#include "fof_struct.h"
 #include "particle_splitting_struct.h"
 #include "timeline.h"
-#include "fof_struct.h"
 
 /**
  * @brief Particle fields for the black hole particles.
@@ -35,7 +35,7 @@ struct bpart {
   long long id;
 
   /*! Pointer to corresponding gravity part. */
-  struct gpart* gpart;
+  struct gpart *gpart;
 
   /*! Particle position. */
   double x[3];
@@ -67,6 +67,19 @@ struct bpart {
     float wcount_dh;
 
   } density;
+
+  struct {
+
+    /*! Gravitational potential copied from the #gpart. */
+    float potential;
+
+    /*! Value of the minimum potential across all neighbours. */
+    float min_potential;
+
+    /*! Delta position to apply after the reposition procedure */
+    double delta_x[3];
+
+  } reposition;
 
   /*! Splitting structure */
   struct particle_splitting_data split_data;
@@ -106,6 +119,21 @@ struct bpart {
 #endif
 
   struct fof_galaxy_data fof_galaxy_data;
+
+  /* Number of BH mergers this particular particle has experienced. */
+  int number_of_mergers;
+
+  /* Total number of BHs which have merged to form this BH. */
+  int cumulative_number_of_seeds;
+
+  /*! Total number of times the black hole has been repositioned (excluding
+   * repositionings of merged-in black holes) */
+  int number_of_repositions;
+
+  /*! Total number of times a black hole attempted repositioning (including
+   * cases where it was aborted because the black hole was already at a
+   * lower potential than all eligible neighbours) */
+  int number_of_reposition_attempts;
 
 } SWIFT_STRUCT_ALIGN;
 

@@ -30,9 +30,9 @@
  * @param list The list of i/o properties to read.
  * @param num_fields The number of i/o fields to read.
  */
-INLINE static void black_holes_read_particles(struct bpart* bparts,
-                                              struct io_props* list,
-                                              int* num_fields) {
+INLINE static void black_holes_read_particles(struct bpart *bparts,
+                                              struct io_props *list,
+                                              int *num_fields) {
 
   /* Say how much we want to read */
   *num_fields = 5;
@@ -50,10 +50,10 @@ INLINE static void black_holes_read_particles(struct bpart* bparts,
                                 UNIT_CONV_LENGTH, bparts, h);
 }
 
-INLINE static void convert_bpart_pos(const struct engine* e,
-                                     const struct bpart* bp, double* ret) {
+INLINE static void convert_bpart_pos(const struct engine *e,
+                                     const struct bpart *bp, double *ret) {
 
-  const struct space* s = e->s;
+  const struct space *s = e->s;
   if (s->periodic) {
     ret[0] = box_wrap(bp->x[0], 0.0, s->dim[0]);
     ret[1] = box_wrap(bp->x[1], 0.0, s->dim[1]);
@@ -70,11 +70,11 @@ INLINE static void convert_bpart_pos(const struct engine* e,
   }
 }
 
-INLINE static void convert_bpart_vel(const struct engine* e,
-                                     const struct bpart* bp, float* ret) {
+INLINE static void convert_bpart_vel(const struct engine *e,
+                                     const struct bpart *bp, float *ret) {
 
   const int with_cosmology = (e->policy & engine_policy_cosmology);
-  const struct cosmology* cosmo = e->cosmology;
+  const struct cosmology *cosmo = e->cosmology;
   const integertime_t ti_current = e->ti_current;
   const double time_base = e->time_base;
   const float dt_kick_grav_mesh = e->dt_kick_grav_mesh_for_io;
@@ -90,7 +90,7 @@ INLINE static void convert_bpart_vel(const struct engine* e,
                             with_cosmology, cosmo);
 
   /* Extrapolate the velocites to the current time */
-  const struct gpart* gp = bp->gpart;
+  const struct gpart *gp = bp->gpart;
   ret[0] = gp->v_full[0] + gp->a_grav[0] * dt_kick_grav;
   ret[1] = gp->v_full[1] + gp->a_grav[1] * dt_kick_grav;
   ret[2] = gp->v_full[2] + gp->a_grav[2] * dt_kick_grav;
@@ -106,8 +106,8 @@ INLINE static void convert_bpart_vel(const struct engine* e,
   ret[2] *= cosmo->a_inv;
 }
 
-INLINE static void convert_bpart_potential(const struct engine* e,
-                                           const struct bpart* bp, float* ret) {
+INLINE static void convert_bpart_potential(const struct engine *e,
+                                           const struct bpart *bp, float *ret) {
 
   if (bp->gpart != NULL)
     ret[0] = gravity_get_comoving_potential(bp->gpart);
@@ -123,55 +123,91 @@ INLINE static void convert_bpart_potential(const struct engine* e,
  * @param num_fields The number of i/o fields to write.
  * @param with_cosmology Are we running a cosmological simulation?
  */
-INLINE static void black_holes_write_particles(const struct bpart* bparts,
-                                               struct io_props* list,
-                                               int* num_fields,
+INLINE static void black_holes_write_particles(const struct bpart *bparts,
+                                               struct io_props *list,
+                                               int *num_fields,
                                                int with_cosmology) {
-
-  /* Say how much we want to write */
-  *num_fields = 6;
+  int num = 0;
 
   /* List what we want to write */
-  list[0] = io_make_output_field_convert_bpart(
+  list[num++] = io_make_output_field_convert_bpart(
       "Coordinates", DOUBLE, 3, UNIT_CONV_LENGTH, 1.f, bparts,
       convert_bpart_pos, "Co-moving position of the particles");
 
-  list[1] = io_make_output_field_convert_bpart(
+  list[num++] = io_make_output_field_convert_bpart(
       "Velocities", FLOAT, 3, UNIT_CONV_SPEED, 0.f, bparts, convert_bpart_vel,
       "Peculiar velocities of the particles. This is a * dx/dt where x is the "
       "co-moving position of the particles.");
 
-  list[2] = io_make_output_field("Masses", FLOAT, 1, UNIT_CONV_MASS, 0.f,
-                                 bparts, mass, "Masses of the particles");
+  list[num++] = io_make_output_field("Masses", FLOAT, 1, UNIT_CONV_MASS, 0.f,
+                                     bparts, mass, "Masses of the particles");
 
-  list[3] = io_make_physical_output_field(
+  list[num++] =
+      io_make_output_field("GroupGasMasses", FLOAT, 1, UNIT_CONV_MASS, 0.f,
+                           bparts, fof_galaxy_data.group_gas_mass,
+                           "Masses of gas particles in the host FOF group.");
+
+  list[num++] =
+      io_make_output_field("GroupMasses", FLOAT, 1, UNIT_CONV_MASS, 0.f, bparts,
+                           fof_galaxy_data.group_mass,
+                           "Masses of all particles in the host FOF group.");
+
+  list[num++] = io_make_physical_output_field(
       "ParticleIDs", ULONGLONG, 1, UNIT_CONV_NO_UNITS, 0.f, bparts, id,
       /*can convert to comoving=*/0, "Unique ID of the particles");
 
-  list[4] = io_make_output_field(
+  list[num++] = io_make_output_field(
       "SmoothingLengths", FLOAT, 1, UNIT_CONV_LENGTH, 1.f, bparts, h,
       "Co-moving smoothing lengths (FWHM of the kernel) of the particles");
 
-  list[5] = io_make_output_field_convert_bpart(
+  list[num++] = io_make_output_field_convert_bpart(
       "Potentials", FLOAT, 1, UNIT_CONV_POTENTIAL, -1.f, bparts,
       convert_bpart_potential, "Gravitational potentials of the particles");
 
+  list[num++] = io_make_physical_output_field(
+      "CumulativeNumberOfSeeds", INT, 1, UNIT_CONV_NO_UNITS, 0.f, bparts,
+      cumulative_number_of_seeds, /*can convert to comoving=*/0,
+      "Total number of BH seeds that have merged into this black hole");
+
+  list[num++] = io_make_physical_output_field(
+      "NumberOfMergers", INT, 1, UNIT_CONV_NO_UNITS, 0.f, bparts,
+      number_of_mergers, /*can convert to comoving=*/1,
+      "Number of mergers the black holes went through. "
+      "This does not include the number of mergers "
+      "accumulated by any merged black hole.");
+
+  list[num++] = io_make_physical_output_field(
+      "NumberOfRepositions", INT, 1, UNIT_CONV_NO_UNITS, 0.f, bparts,
+      number_of_repositions, /*can convert to comoving=*/1,
+      "Number of repositioning events the black holes went through. This does "
+      "not include the number of reposition events accumulated by any merged "
+      "black holes.");
+
+  list[num++] = io_make_physical_output_field(
+      "NumberOfRepositionAttempts", INT, 1, UNIT_CONV_NO_UNITS, 0.f, bparts,
+      number_of_reposition_attempts, /*can convert to comoving=*/1,
+      "Number of time steps in which the black holes had an eligible particle "
+      "to reposition to. They may or may not have ended up moving there, "
+      "depending on their mass and on whether these particles were at "
+      "a lower or higher potential than the black holes themselves. It does "
+      "not include attempted repositioning events accumulated by any merged "
+      "black holes.");
+
 #ifdef DEBUG_INTERACTIONS_BLACK_HOLES
-
-  list += *num_fields;
-  *num_fields += 4;
-
-  list[0] = io_make_output_field("Num_ngb_density", INT, 1, UNIT_CONV_NO_UNITS,
-                                 bparts, num_ngb_density);
-  list[1] = io_make_output_field("Num_ngb_force", INT, 1, UNIT_CONV_NO_UNITS,
-                                 bparts, num_ngb_force);
-  list[2] = io_make_output_field("Ids_ngb_density", LONGLONG,
-                                 MAX_NUM_OF_NEIGHBOURS_BLACK_HOLES,
-                                 UNIT_CONV_NO_UNITS, bparts, ids_ngbs_density);
-  list[3] = io_make_output_field("Ids_ngb_force", LONGLONG,
-                                 MAX_NUM_OF_NEIGHBOURS_BLACK_HOLES,
-                                 UNIT_CONV_NO_UNITS, bparts, ids_ngbs_force);
+  list[num++] = io_make_output_field(
+      "Num_ngb_density", INT, 1, UNIT_CONV_NO_UNITS, bparts, num_ngb_density);
+  list[num++] = io_make_output_field("Num_ngb_force", INT, 1,
+                                     UNIT_CONV_NO_UNITS, bparts, num_ngb_force);
+  list[num++] = io_make_output_field(
+      "Ids_ngb_density", LONGLONG, MAX_NUM_OF_NEIGHBOURS_BLACK_HOLES,
+      UNIT_CONV_NO_UNITS, bparts, ids_ngbs_density);
+  list[num++] = io_make_output_field(
+      "Ids_ngb_force", LONGLONG, MAX_NUM_OF_NEIGHBOURS_BLACK_HOLES,
+      UNIT_CONV_NO_UNITS, bparts, ids_ngbs_force);
 #endif
+
+  /* Say how much we want to write */
+  *num_fields = num;
 }
 
 #endif /* SWIFT_ECHOES_BLACK_HOLES_IO_H */
