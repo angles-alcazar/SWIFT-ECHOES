@@ -4129,6 +4129,7 @@ void fof_struct_restore(struct fof_props *props, FILE *stream) {
 void fof_first_init_bpart(struct bpart *bpart) {
 #ifdef BLACK_HOLES_ECHOES
   bpart->fof_galaxy_data.group_gas_mass = 0.f;
+  bpart->fof_galaxy_data.group_mass = 0.f;
   bpart->fof_galaxy_data.group_size = 0;
 #endif
 }
@@ -4143,16 +4144,23 @@ void fof_set_black_holes_info(const struct fof_props *props,
 
   for (size_t i = 0; i < nr_bparts; i++) {
     /* Ignore inhibited particles.
-     * smsutherland: These are particles that may not really exist anymore. 
+     * smsutherland: These are particles that may not really exist anymore.
      * Their gpart link may be broken.*/
     if (bparts[i].time_bin >= time_bin_inhibited) continue;
-    /* Skip BHs that are somehow not a part of a group. */
-    if (bparts[i].gpart->fof_data.group_id == props->group_id_default) continue;
+    if (bparts[i].gpart->fof_data.group_id == props->group_id_default) {
+        /* BHs that are not in a group have their group data reset
+         * smsutherland TODO: Should this just call fof_first_init_bpart? */
+      bparts[i].fof_galaxy_data.group_size = 0;
+      bparts[i].fof_galaxy_data.group_gas_mass = 0.f;
+      bparts[i].fof_galaxy_data.group_mass = 0.f;
+    } else {
+      const size_t index = bparts[i].gpart->fof_data.group_id - 1;
 
-    const size_t index = bparts[i].gpart->fof_data.group_id - 1;
-    bparts[i].fof_galaxy_data.group_size = bparts[i].gpart->fof_data.group_size;
-    bparts[i].fof_galaxy_data.group_gas_mass = props->group_gas_mass[index];
-    bparts[i].fof_galaxy_data.group_mass = props->group_mass[index];
+      bparts[i].fof_galaxy_data.group_size =
+          bparts[i].gpart->fof_data.group_size;
+      bparts[i].fof_galaxy_data.group_gas_mass = props->group_gas_mass[index];
+      bparts[i].fof_galaxy_data.group_mass = props->group_mass[index];
+    }
   }
 #endif /* BLACK_HOLES_ECHOES */
 }
