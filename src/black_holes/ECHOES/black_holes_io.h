@@ -142,6 +142,11 @@ INLINE static void black_holes_write_particles(const struct bpart *bparts,
   list[num++] = io_make_output_field("Masses", FLOAT, 1, UNIT_CONV_MASS, 0.f,
                                      bparts, mass, "Masses of the particles");
 
+  list[num++] =
+      io_make_output_field("GroupGasMasses", FLOAT, 1, UNIT_CONV_MASS, 0.f,
+                           bparts, fof_galaxy_data.gas_mass,
+                           "Masses of gas particles in the host FOF group.");
+
   list[num++] = io_make_physical_output_field(
       "ParticleIDs", ULONGLONG, 1, UNIT_CONV_NO_UNITS, 0.f, bparts, id,
       /*can convert to comoving=*/0, "Unique ID of the particles");
@@ -178,13 +183,12 @@ INLINE static void black_holes_write_particles(const struct bpart *bparts,
       number_of_reposition_attempts, /*can convert to comoving=*/1,
       "Number of time steps in which the black holes had an eligible particle "
       "to reposition to. They may or may not have ended up moving there, "
-      "depending on their subgrid mass and on whether these particles were at "
+      "depending on their mass and on whether these particles were at "
       "a lower or higher potential than the black holes themselves. It does "
       "not include attempted repositioning events accumulated by any merged "
       "black holes.");
 
 #ifdef DEBUG_INTERACTIONS_BLACK_HOLES
-
   list[num++] = io_make_output_field(
       "Num_ngb_density", INT, 1, UNIT_CONV_NO_UNITS, bparts, num_ngb_density);
   list[num++] = io_make_output_field("Num_ngb_force", INT, 1,

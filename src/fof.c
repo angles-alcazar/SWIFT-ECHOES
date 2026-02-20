@@ -4129,13 +4129,7 @@ void fof_struct_restore(struct fof_props *props, FILE *stream) {
 void fof_first_init_bpart(struct bpart *bpart) {
 #ifdef BLACK_HOLES_ECHOES
   bpart->fof_galaxy_data.gas_mass = 0.f;
-  /* smsutherland: This is INCORRECT.
-   * The default group_id is stored in the fof properties.
-   * But we call this from the space initialization code, which doesn't have the
-   * fof properties. This is just a temporary measure, for testing purposes, not
-   * actual final code. */
-  bpart->fof_galaxy_data.group_id = 0;
-  bpart->fof_galaxy_data.group_size = 1;
+  bpart->fof_galaxy_data.group_size = 0;
 #endif
 }
 
@@ -4153,7 +4147,6 @@ void fof_set_black_holes_info(const struct fof_props *props,
      * Their gpart link may be broken.*/
     if (bparts[i].time_bin >= time_bin_inhibited) continue;
 
-    bparts[i].fof_galaxy_data.group_id = bparts[i].gpart->fof_data.group_id;
     bparts[i].fof_galaxy_data.group_size = bparts[i].gpart->fof_data.group_size;
   }
 #endif /* BLACK_HOLES_ECHOES */
