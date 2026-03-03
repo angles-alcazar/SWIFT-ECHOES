@@ -4145,25 +4145,33 @@ void fof_set_black_holes_info(const struct fof_props *props,
   size_t nr_bparts = s->nr_bparts;
 
   for (size_t i = 0; i < nr_bparts; i++) {
+    struct bpart *bpart = &bparts[i];
+
     /* Ignore inhibited particles.
      * smsutherland: These are particles that may not really exist anymore.
      * Their gpart link may be broken.*/
-    if (bparts[i].time_bin >= time_bin_inhibited) continue;
-    if (bparts[i].gpart->fof_data.group_id == props->group_id_default) {
+    if (bpart->time_bin >= time_bin_inhibited) continue;
+    if (bpart->gpart->fof_data.group_id == props->group_id_default) {
       /* BHs that are not in a group have their group data reset
        * smsutherland TODO: Should this just call fof_first_init_bpart? */
-      bparts[i].fof_galaxy_data.group_size = 0;
-      bparts[i].fof_galaxy_data.group_gas_mass = 0.f;
-      bparts[i].fof_galaxy_data.group_mass = 0.f;
+      bpart->fof_galaxy_data.group_size = 0;
+      bpart->fof_galaxy_data.group_gas_mass = 0.f;
+      bpart->fof_galaxy_data.group_mass = 0.f;
     } else {
-      const size_t index = bparts[i].gpart->fof_data.group_id - 1;
+      const size_t index = bpart->gpart->fof_data.group_id - 1;
 
-      bparts[i].fof_galaxy_data.group_size =
-          bparts[i].gpart->fof_data.group_size;
-      bparts[i].fof_galaxy_data.group_gas_mass = props->group_gas_mass[index];
-      bparts[i].fof_galaxy_data.group_mass = props->group_mass[index];
-      bparts[i].fof_galaxy_data.max_group_mass = fmax(
-          bparts[i].fof_galaxy_data.max_group_mass, props->group_mass[index]);
+      bpart->fof_galaxy_data.group_size = bpart->gpart->fof_data.group_size;
+      bpart->fof_galaxy_data.group_gas_mass = props->group_gas_mass[index];
+
+      float new_group_mass = props->group_mass[index];
+      float old_group_mass = bpart->fof_galaxy_data.group_mass;
+
+      if (new_group_mass <= old_group_mass * bh_props->max_group_mass_change) {
+
+        bpart->fof_galaxy_data.group_mass = new_group_mass;
+        bpart->fof_galaxy_data.max_group_mass =
+            fmax(bpart->fof_galaxy_data.max_group_mass, new_group_mass);
+      }
     }
   }
 #endif /* BLACK_HOLES_ECHOES */
