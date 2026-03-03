@@ -65,7 +65,7 @@ black_holes_mark_part_as_not_swallowed(struct black_holes_part_data *p_data) {
  */
 __attribute__((always_inline)) INLINE static void black_holes_init_potential(
     struct black_holes_part_data *p_data) {
-    p_data->potential = FLT_MAX;
+  p_data->potential = FLT_MAX;
 }
 
 /**
