@@ -4144,12 +4144,51 @@ void fof_set_black_holes_info(const struct fof_props *props,
   struct bpart *bparts = s->bparts;
   size_t nr_bparts = s->nr_bparts;
 
+  float *min_bpart_radii = NULL;
+  long long *min_bpart_id = NULL;
+  if (swift_memalign("fof_min_bpart_radii", (void **)&min_bpart_radii, 32,
+                     props->num_groups * sizeof(double)) != 0)
+    error("Failed to allocate list of BH radii for FOF search.");
+  if (swift_memalign("fof_min_bpart_id", (void **)&min_bpart_id, 32,
+                     props->num_groups * sizeof(long long)) != 0)
+    error("Failed to allocate list of BH ID for FOF search.");
+
+  /* Initialise the arrays to the limit */
+  for (size_t i = 0; i < (size_t)props->num_groups; i++) {
+    min_bpart_radii[i] = DBL_MAX;
+  }
+  for (size_t i = 0; i < (size_t)props->num_groups; i++) {
+    min_bpart_id[i] = LLONG_MAX;
+  }
+
+  /* Loop 1: Go thorugh all the black holes to calculate their distance from
+   * their group CoM. We also store the minimum distance black hole for each
+   * group. */
+  for (size_t i = 0; i < nr_bparts; i++) {
+    struct bpart *bpart = &bparts[i];
+    if (bpart->time_bin >= time_bin_inhibited) continue;
+    if (bpart->gpart->fof_data.group_id == props->group_id_default) continue;
+
+    const size_t index = bpart->gpart->fof_data.group_id - 1;
+
+    double dx[3] = {
+        props->group_centre_of_mass[index * 3 + 0] - bpart->x[0],
+        props->group_centre_of_mass[index * 3 + 1] - bpart->x[1],
+        props->group_centre_of_mass[index * 3 + 2] - bpart->x[2],
+    };
+    const float r = sqrtf((dx[0] * dx[0]) + (dx[1] * dx[1]) + (dx[2] * dx[2]));
+    if (r < min_bpart_radii[index]) {
+      min_bpart_radii[index] = r;
+      min_bpart_id[index] = bpart->id;
+    }
+  }
+
   for (size_t i = 0; i < nr_bparts; i++) {
     struct bpart *bpart = &bparts[i];
 
     /* Ignore inhibited particles.
      * smsutherland: These are particles that may not really exist anymore.
-     * Their gpart link may be broken.*/
+     * Their gpart link may be broken. */
     if (bpart->time_bin >= time_bin_inhibited) continue;
     if (bpart->gpart->fof_data.group_id == props->group_id_default) {
       /* BHs that are not in a group have their group data reset
@@ -4160,11 +4199,9 @@ void fof_set_black_holes_info(const struct fof_props *props,
     } else {
       const size_t index = bpart->gpart->fof_data.group_id - 1;
 
-      float new_group_mass = props->group_mass[index];
-      float old_group_mass = bpart->fof_galaxy_data.group_mass;
-
-      if (new_group_mass == 0.f ||
-          new_group_mass <= old_group_mass * bh_props->max_group_mass_change) {
+      /* If we are the central BH, then we update the properties */
+      if (bpart->id == min_bpart_id[index]) {
+        float new_group_mass = props->group_mass[index];
 
         bpart->fof_galaxy_data.group_size = bpart->gpart->fof_data.group_size;
         bpart->fof_galaxy_data.group_gas_mass = props->group_gas_mass[index];
@@ -4175,6 +4212,9 @@ void fof_set_black_holes_info(const struct fof_props *props,
       }
     }
   }
+
+  swift_free("fof_min_bpart_radii", min_bpart_radii);
+  swift_free("fof_min_bpart_id", min_bpart_id);
 #endif /* BLACK_HOLES_ECHOES */
 }
 
