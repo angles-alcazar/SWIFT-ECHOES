@@ -4171,7 +4171,7 @@ void fof_set_black_holes_info(const struct fof_props *props,
 
         bpart->fof_galaxy_data.group_mass = new_group_mass;
         bpart->fof_galaxy_data.max_group_mass =
-            fmax(bpart->fof_galaxy_data.max_group_mass, new_group_mass);
+            fmaxf(bpart->fof_galaxy_data.max_group_mass, new_group_mass);
       }
     }
   }
