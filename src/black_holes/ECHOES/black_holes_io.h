@@ -156,8 +156,8 @@ INLINE static void black_holes_write_particles(const struct bpart *bparts,
       "MaxGroupMasses", FLOAT, 1, UNIT_CONV_MASS, 0.f, bparts,
       fof_galaxy_data.max_group_mass, "Maximum reached group mass.");
 
-  list[num++] = io_make_output_field("Central", BOOL, 1, UNIT_CONV_NO_UNITS,
-                                     0.f, bparts, fof_galaxy_data.is_central,
+  list[num++] = io_make_output_field("Central", INT, 1, UNIT_CONV_NO_UNITS, 0.f,
+                                     bparts, fof_galaxy_data.is_central,
                                      "Is the particle considering itself the "
                                      "central galaxy in its host halo?");
 
