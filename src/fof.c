@@ -4146,32 +4146,33 @@ void fof_set_black_holes_info(const struct fof_props *props,
   struct bpart *bparts = s->bparts;
   size_t nr_bparts = s->nr_bparts;
 
-  float *min_bpart_radii = NULL;
-  long long *min_bpart_id = NULL;
-  if (swift_memalign("fof_min_bpart_radii", (void **)&min_bpart_radii, 32,
+  float *central_gal_mass = NULL;
+  long long *central_part_id = NULL;
+  if (swift_memalign("fof_central_gal_mass", (void **)&central_gal_mass, 32,
                      props->num_groups * sizeof(double)) != 0)
-    error("Failed to allocate list of BH radii for FOF search.");
+    error("Failed to allocate list of galaxy mass for FOF search.");
 
   /* sutherland TODO: Storing the ID of the closest BH prevents ties from
    * causing problems. But ties are very very unlikely. Now that the BHs store
    * their own distance, they can compare that against the min_bpart_radii and
    * see if they're the central BH. That saves an extra allocation every FOF
    * run, but is less robust because of ties. */
-  if (swift_memalign("fof_min_bpart_id", (void **)&min_bpart_id, 32,
+  if (swift_memalign("fof_min_bpart_id", (void **)&central_part_id, 32,
                      props->num_groups * sizeof(long long)) != 0)
-    error("Failed to allocate list of BH ID for FOF search.");
+    error("Failed to allocate list of galaxy ID for FOF search.");
 
   /* Initialise the arrays to the limit */
   for (size_t i = 0; i < (size_t)props->num_groups; i++) {
-    min_bpart_radii[i] = DBL_MAX;
+    /* sutherland NOTE: I use -1 here so that a newly formed galaxy with a halo
+     * mass still set to 0 will be greater than the default value. */
+    central_gal_mass[i] = -1.f;
   }
   for (size_t i = 0; i < (size_t)props->num_groups; i++) {
-    min_bpart_id[i] = LLONG_MAX;
+    central_part_id[i] = LLONG_MAX;
   }
 
-  /* Loop 1: Go through all the black holes to calculate their distance from
-   * their group CoM. We also store the minimum distance black hole for each
-   * group. */
+  /* Loop 1: Go through all the galaxies to determine which has the highest peak
+   * mass */
   for (size_t i = 0; i < nr_bparts; i++) {
     struct bpart *bpart = &bparts[i];
     if (bpart->time_bin >= time_bin_inhibited) continue;
@@ -4179,21 +4180,9 @@ void fof_set_black_holes_info(const struct fof_props *props,
 
     const size_t index = bpart->gpart->fof_data.group_id - 1;
 
-    double dx[3] = {
-        props->group_centre_of_mass[index * 3 + 0] - bpart->x[0],
-        props->group_centre_of_mass[index * 3 + 1] - bpart->x[1],
-        props->group_centre_of_mass[index * 3 + 2] - bpart->x[2],
-    };
-    /* sutherland TODO: We could make comparisons to r^2 here and save the sqrt
-     * computation. The BH particles store their own central distance, so we'd
-     * be calculating the sqrt anyway. See if we can handle this such that we
-     * don't actually need to store r. If storing r^2 is ok, then we could
-     * convert to r only when outputting for a snapshot. */
-    const float r = sqrtf((dx[0] * dx[0]) + (dx[1] * dx[1]) + (dx[2] * dx[2]));
-    bpart->fof_galaxy_data.distance_to_CoM = r;
-    if (r < min_bpart_radii[index]) {
-      min_bpart_radii[index] = r;
-      min_bpart_id[index] = bpart->id;
+    if (bpart->fof_galaxy_data.max_group_mass > central_gal_mass[index]) {
+      central_gal_mass[index] = bpart->fof_galaxy_data.max_group_mass;
+      central_part_id[index] = bpart->id;
     }
   }
 
@@ -4208,7 +4197,8 @@ void fof_set_black_holes_info(const struct fof_props *props,
     if (bpart->time_bin >= time_bin_inhibited) continue;
     if (bpart->gpart->fof_data.group_id == props->group_id_default) {
       /* BHs that are not in a group have their group data reset
-       * smsutherland TODO: Should this just call fof_first_init_bpart? */
+       * smsutherland TODO: Should this just call fof_first_init_bpart?
+       * Maybe if it gets marked as inline. */
       /*
       bpart->fof_galaxy_data.group_size = 0;
       bpart->fof_galaxy_data.group_gas_mass = 0.f;
@@ -4219,8 +4209,20 @@ void fof_set_black_holes_info(const struct fof_props *props,
     } else {
       const size_t index = bpart->gpart->fof_data.group_id - 1;
 
+      double dx[3] = {
+          props->group_centre_of_mass[index * 3 + 0] - bpart->x[0],
+          props->group_centre_of_mass[index * 3 + 1] - bpart->x[1],
+          props->group_centre_of_mass[index * 3 + 2] - bpart->x[2],
+      };
+      /* sutherland TODO: See if we can handle this such
+       * that we don't actually need to store r. If storing r^2 is ok, then we
+       * could convert to r only when outputting for a snapshot. */
+      const float r =
+          sqrtf((dx[0] * dx[0]) + (dx[1] * dx[1]) + (dx[2] * dx[2]));
+      bpart->fof_galaxy_data.distance_to_CoM = r;
+
       /* If we are the central BH, then we update the properties */
-      if (bpart->id == min_bpart_id[index]) {
+      if (bpart->id == central_part_id[index]) {
         float new_group_mass = props->group_mass[index];
 
         /*
@@ -4239,8 +4241,8 @@ void fof_set_black_holes_info(const struct fof_props *props,
     }
   }
 
-  swift_free("fof_min_bpart_radii", min_bpart_radii);
-  swift_free("fof_min_bpart_id", min_bpart_id);
+  swift_free("fof_min_bpart_radii", central_gal_mass);
+  swift_free("fof_min_bpart_id", central_part_id);
 #endif /* BLACK_HOLES_ECHOES */
 }
 
