@@ -4129,10 +4129,12 @@ void fof_struct_restore(struct fof_props *props, FILE *stream) {
 
 void fof_first_init_bpart(struct bpart *bpart) {
 #ifdef BLACK_HOLES_ECHOES
-  bpart->fof_galaxy_data.group_gas_mass = 0.f;
+  // bpart->fof_galaxy_data.group_gas_mass = 0.f;
   bpart->fof_galaxy_data.group_mass = 0.f;
   bpart->fof_galaxy_data.max_group_mass = 0.f;
-  bpart->fof_galaxy_data.group_size = 0;
+  bpart->fof_galaxy_data.distance_to_CoM = 0.f;
+  bpart->fof_galaxy_data.is_central = 0;
+  // bpart->fof_galaxy_data.group_size = 0;
 #endif
 }
 
@@ -4149,6 +4151,12 @@ void fof_set_black_holes_info(const struct fof_props *props,
   if (swift_memalign("fof_min_bpart_radii", (void **)&min_bpart_radii, 32,
                      props->num_groups * sizeof(double)) != 0)
     error("Failed to allocate list of BH radii for FOF search.");
+
+  /* sutherland TODO: Storing the ID of the closest BH prevents ties from
+   * causing problems. But ties are very very unlikely. Now that the BHs store
+   * their own distance, they can compare that against the min_bpart_radii and
+   * see if they're the central BH. That saves an extra allocation every FOF
+   * run, but is less robust because of ties. */
   if (swift_memalign("fof_min_bpart_id", (void **)&min_bpart_id, 32,
                      props->num_groups * sizeof(long long)) != 0)
     error("Failed to allocate list of BH ID for FOF search.");
@@ -4161,7 +4169,7 @@ void fof_set_black_holes_info(const struct fof_props *props,
     min_bpart_id[i] = LLONG_MAX;
   }
 
-  /* Loop 1: Go thorugh all the black holes to calculate their distance from
+  /* Loop 1: Go through all the black holes to calculate their distance from
    * their group CoM. We also store the minimum distance black hole for each
    * group. */
   for (size_t i = 0; i < nr_bparts; i++) {
@@ -4176,13 +4184,21 @@ void fof_set_black_holes_info(const struct fof_props *props,
         props->group_centre_of_mass[index * 3 + 1] - bpart->x[1],
         props->group_centre_of_mass[index * 3 + 2] - bpart->x[2],
     };
+    /* sutherland TODO: We could make comparisons to r^2 here and save the sqrt
+     * computation. The BH particles store their own central distance, so we'd
+     * be calculating the sqrt anyway. See if we can handle this such that we
+     * don't actually need to store r. If storing r^2 is ok, then we could
+     * convert to r only when outputting for a snapshot. */
     const float r = sqrtf((dx[0] * dx[0]) + (dx[1] * dx[1]) + (dx[2] * dx[2]));
+    bpart->fof_galaxy_data.distance_to_CoM = r;
     if (r < min_bpart_radii[index]) {
       min_bpart_radii[index] = r;
       min_bpart_id[index] = bpart->id;
     }
   }
 
+  /* Loop 2: Update BH particles according to whether they are the central or
+   * not. */
   for (size_t i = 0; i < nr_bparts; i++) {
     struct bpart *bpart = &bparts[i];
 
@@ -4193,9 +4209,13 @@ void fof_set_black_holes_info(const struct fof_props *props,
     if (bpart->gpart->fof_data.group_id == props->group_id_default) {
       /* BHs that are not in a group have their group data reset
        * smsutherland TODO: Should this just call fof_first_init_bpart? */
+      /*
       bpart->fof_galaxy_data.group_size = 0;
       bpart->fof_galaxy_data.group_gas_mass = 0.f;
+      */
       bpart->fof_galaxy_data.group_mass = 0.f;
+      bpart->fof_galaxy_data.distance_to_CoM = 0.f;
+      bpart->fof_galaxy_data.is_central = 0;
     } else {
       const size_t index = bpart->gpart->fof_data.group_id - 1;
 
@@ -4203,12 +4223,18 @@ void fof_set_black_holes_info(const struct fof_props *props,
       if (bpart->id == min_bpart_id[index]) {
         float new_group_mass = props->group_mass[index];
 
+        /*
         bpart->fof_galaxy_data.group_size = bpart->gpart->fof_data.group_size;
         bpart->fof_galaxy_data.group_gas_mass = props->group_gas_mass[index];
+        */
 
         bpart->fof_galaxy_data.group_mass = new_group_mass;
         bpart->fof_galaxy_data.max_group_mass =
             fmaxf(bpart->fof_galaxy_data.max_group_mass, new_group_mass);
+        bpart->fof_galaxy_data.is_central = 1;
+      } else {
+        /* We're not the central galaxy. Mark that fact! */
+        bpart->fof_galaxy_data.is_central = 0;
       }
     }
   }

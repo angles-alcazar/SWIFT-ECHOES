@@ -36,11 +36,20 @@ struct fof_galaxy_data {
   /*! Maximum group mass ever reached by the galaxy */
   float max_group_mass;
 
-  /*! Sum of masses of gas particles in the galaxy */
-  float group_gas_mass;
+  /*! boolean flag for whether the BH particle thinks it's a central BH
+   * sutherland TODO: Maybe save some spaceby reducing the bit footprint of the
+   * bool? For now all the fields are at least 32 bits, so reducing this to 1
+   * bit wouldn't save any space, but if we have more flags in the future, we
+   * could combine them into a single int, or use C bitfields. What version of C
+   * introduced bitfields? If it's too late we might not want to include them so
+   * as not to break support for older compilers. Unless we don't really care?
+   * Maybe it's better to say we're using a more recent gcc version. */
+  int is_central;
 
-  /*! Size of the FOF group of this particle */
-  size_t group_size;
+  /* How far is the BH to the center of mass of its group?
+   * sutherland TODO: How should we handle cases where a BH is no longer in a
+   * group? Options (that I see): Set this to 0 Keep it at its previous value */
+  float distance_to_CoM;
 };
 
 /**
