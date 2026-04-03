@@ -311,6 +311,12 @@ __attribute__((always_inline)) INLINE static void black_holes_swallow_bpart(
 
   bpi->number_of_mergers++;
   bpi->cumulative_number_of_seeds += bpj->cumulative_number_of_seeds;
+
+  bpi->fof_galaxy_data.is_central |= bpj->fof_galaxy_data.is_central;
+  bpi->fof_galaxy_data.max_group_mass = fmaxf(
+      bpi->fof_galaxy_data.max_group_mass, bpj->fof_galaxy_data.max_group_mass);
+  bpi->fof_galaxy_data.group_mass =
+      fmaxf(bpi->fof_galaxy_data.group_mass, bpj->fof_galaxy_data.group_mass);
 }
 
 /**
