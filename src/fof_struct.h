@@ -48,7 +48,8 @@ struct fof_galaxy_data {
 
   /* How far is the BH to the center of mass of its group?
    * sutherland TODO: How should we handle cases where a BH is no longer in a
-   * group? Options (that I see): Set this to 0 Keep it at its previous value */
+   * group? Options (that I see): Set this to 0, set it to FLT_MAX, keep it at
+   * its previous value */
   float distance_to_CoM;
 };
 
