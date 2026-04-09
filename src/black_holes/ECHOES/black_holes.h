@@ -26,6 +26,7 @@
 #include "black_holes_struct.h"
 #include "cooling_properties.h"
 #include "dimension.h"
+#include "fof.h"
 #include "gravity.h"
 #include "kernel_hydro.h"
 #include "minmax.h"
@@ -483,6 +484,9 @@ INLINE static void black_holes_create_from_gas(
 
   /* Likewise it's not been swallowed yet either */
   black_holes_mark_bpart_as_not_swallowed(&bp->merger_data);
+
+  /* All its fof data has to be initialized as well */
+  fof_first_init_bpart(bp);
 
   /* First initialisation */
   black_holes_init_bpart(bp);
