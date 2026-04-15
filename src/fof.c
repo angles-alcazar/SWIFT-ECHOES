@@ -18,6 +18,7 @@
  ******************************************************************************/
 
 /* Config parameters. */
+#include "black_holes/ECHOES/black_holes_properties.h"
 #include "physical_constants.h"
 
 #include <config.h>
@@ -4129,12 +4130,10 @@ void fof_struct_restore(struct fof_props *props, FILE *stream) {
 
 void fof_first_init_bpart(struct bpart *bpart) {
 #ifdef BLACK_HOLES_ECHOES
-  // bpart->fof_galaxy_data.group_gas_mass = 0.f;
   bpart->fof_galaxy_data.group_mass = 0.f;
   bpart->fof_galaxy_data.max_group_mass = 0.f;
   bpart->fof_galaxy_data.distance_to_CoM = 0.f;
   bpart->fof_galaxy_data.is_central = 0;
-  // bpart->fof_galaxy_data.group_size = 0;
 #endif
 }
 
@@ -4171,19 +4170,24 @@ void fof_set_black_holes_info(const struct fof_props *props,
     central_part_id[i] = LLONG_MAX;
   }
 
-  /* Loop 1: Go through all the galaxies to determine which has the highest peak
-   * mass */
-  for (size_t i = 0; i < nr_bparts; i++) {
-    struct bpart *bpart = &bparts[i];
-    if (bpart->time_bin >= time_bin_inhibited) continue;
-    if (bpart->gpart->fof_data.group_id == props->group_id_default) continue;
+  /* Loop 1: Go through all the galaxies to determine which is the central */
+  if (bh_props->central_criterion == BH_central_peak_mass) {
+    for (size_t i = 0; i < nr_bparts; i++) {
+      struct bpart *bpart = &bparts[i];
+      if (bpart->time_bin >= time_bin_inhibited) continue;
+      if (bpart->gpart->fof_data.group_id == props->group_id_default) continue;
 
-    const size_t index = bpart->gpart->fof_data.group_id - 1;
+      const size_t index = bpart->gpart->fof_data.group_id - 1;
 
-    if (bpart->fof_galaxy_data.max_group_mass > central_gal_mass[index]) {
-      central_gal_mass[index] = bpart->fof_galaxy_data.max_group_mass;
-      central_part_id[index] = bpart->id;
+      if (bpart->fof_galaxy_data.max_group_mass > central_gal_mass[index]) {
+        central_gal_mass[index] = bpart->fof_galaxy_data.max_group_mass;
+        central_part_id[index] = bpart->id;
+      }
     }
+  } else {
+#ifdef SWIFT_DEBUG_CHECKS
+    error("Invalid choice of galaxy central criterion type");
+#endif
   }
 
   /* Loop 2: Update BH particles according to whether they are the central or
@@ -4195,14 +4199,11 @@ void fof_set_black_holes_info(const struct fof_props *props,
      * smsutherland: These are particles that may not really exist anymore.
      * Their gpart link may be broken. */
     if (bpart->time_bin >= time_bin_inhibited) continue;
+
     if (bpart->gpart->fof_data.group_id == props->group_id_default) {
       /* BHs that are not in a group have their group data reset
        * smsutherland TODO: Should this just call fof_first_init_bpart?
        * Maybe if it gets marked as inline. */
-      /*
-      bpart->fof_galaxy_data.group_size = 0;
-      bpart->fof_galaxy_data.group_gas_mass = 0.f;
-      */
       bpart->fof_galaxy_data.group_mass = 0.f;
       bpart->fof_galaxy_data.distance_to_CoM = 0.f;
       bpart->fof_galaxy_data.is_central = 0;

@@ -280,7 +280,7 @@ runner_iact_nonsym_bh_bh_swallow(const float r2, const float dx[3],
   } else {
     /* Cannot happen! */
 #ifdef SWIFT_DEBUG_CHECKS
-    error("Invalid choice of BH merger threshold type");
+    error("Invalid choice of galaxy merger threshold type");
 #endif
     v2_threshold = 0.f;
   }

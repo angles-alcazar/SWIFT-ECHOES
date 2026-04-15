@@ -28,6 +28,10 @@ enum BH_merger_threshold {
   BH_mergers_escape_velocity, /* TODO: some insightful description */
 };
 
+enum BH_central_criterion {
+  BH_central_peak_mass, /* TODO: some insightful description */
+};
+
 /**
  * @brief Properties of the black hole scheme.
  *
@@ -68,6 +72,8 @@ struct black_holes_props {
 
   /* Which criterion for black hole mergers are we using? */
   enum BH_merger_threshold merger_threshold_type;
+
+  enum BH_central_criterion central_criterion;
 };
 
 /**
@@ -125,7 +131,8 @@ static INLINE void black_holes_props_init(struct black_holes_props *bp,
   if (!strcmp(temp, "EscapeVelocity")) {
     bp->merger_threshold_type = BH_mergers_escape_velocity;
   } else {
-    error("The BH merger model must be one of EscapeVelocity, not %s", temp);
+    error("The galaxy merger model must be one of EscapeVelocity, not %s",
+          temp);
   }
 
   bp->max_merging_distance_ratio =
@@ -136,6 +143,13 @@ static INLINE void black_holes_props_init(struct black_holes_props *bp,
 
   bp->max_group_mass_change =
       parser_get_param_float(params, "ECHOES:max_group_mass_change");
+
+  parser_get_param_string(params, "ECHOES:central_galaxy_criterion", temp);
+  if (!strcmp(temp, "PeakMass")) {
+    bp->central_criterion = BH_central_peak_mass;
+  } else {
+    error("The galaxy central criterion must be one of PeakMass, not %s", temp);
+  }
 }
 
 /**
