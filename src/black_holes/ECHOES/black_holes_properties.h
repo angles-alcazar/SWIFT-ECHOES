@@ -20,6 +20,7 @@
 #define SWIFT_ECHOES_BLACK_HOLES_PROPERTIES_H
 
 #include "chemistry.h"
+#include "fof.h"
 #include "hydro_properties.h"
 
 #include <string.h>
@@ -70,10 +71,19 @@ struct black_holes_props {
   /*! Maximal ratio by which ECHOES galaxy masses can change between FOF runs */
   float max_group_mass_change;
 
-  /* Which criterion for black hole mergers are we using? */
+  /*! Which criterion for black hole mergers are we using? */
   enum BH_merger_threshold merger_threshold_type;
 
+  /*! Which criterion for black holes to be considered central are we using? */
   enum BH_central_criterion central_criterion;
+
+  /*! Should black holes be allowed to merge when in different FoF groups? */
+  int allow_intergroup_mergers;
+
+  /*! Default group ID to give to particles not in a group.
+   *  We steal this from the FoF parameters because we need to check when
+   * disallowing integroup mergers. */
+  size_t group_id_default;
 };
 
 /**
@@ -150,6 +160,13 @@ static INLINE void black_holes_props_init(struct black_holes_props *bp,
   } else {
     error("The galaxy central criterion must be one of PeakMass, not %s", temp);
   }
+
+  bp->allow_intergroup_mergers =
+      parser_get_param_int(params, "ECHOES:allow_intergroup_mergers");
+
+  /* We steal this from the FoF props */
+  bp->group_id_default = parser_get_opt_param_int(
+      params, "FOF:group_id_default", fof_props_default_group_id);
 }
 
 /**

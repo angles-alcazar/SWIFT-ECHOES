@@ -21,11 +21,14 @@
 
 #include "black_holes_part.h"
 #include "black_holes_properties.h"
+#include "cell.h"
 #include "cosmology.h"
 #include "entropy_floor.h"
 #include "gravity_properties.h"
 #include "kernel_gravity.h"
 #include "kernel_hydro.h"
+
+#include <math.h>
 
 /**
  * @brief Density interaction between two particles (non-symmetric).
@@ -244,13 +247,50 @@ runner_iact_nonsym_bh_bh_swallow(const float r2, const float dx[3],
                                  const struct black_holes_props *bh_props,
                                  const integertime_t ti_current) {
 
-  /* NOTE:
+  if (!bh_props->allow_intergroup_mergers) {
+    /* ssutherland: Do we want to store the group_id in the bpart itself to
+     * avoid this double indirection? */
+    size_t bi_id = bi->gpart->fof_data.group_id;
+    size_t bj_id = bj->gpart->fof_data.group_id;
+
+    /* Require being in a group to swallow other BHs */
+    if (bi_id == bh_props->group_id_default) return;
+
+    /* Disallow swallowing when BHs are in different FoF groups.
+     * If bj isn't in a fof group at all, it can still be swallowed. */
+    if (bi_id != bj_id && bj_id != bh_props->group_id_default) {
+      return;
+    }
+  }
+
+  /* Disallow smaller BHs from swallowing larger ones.
+   * In the case of mass ties, the BH with the larger ID swallows the other. */
+  /* ssutherland NOTE: EAGLE has a similar condition on the subgrid mass which
+   * we did not initially inherit.*/
+  if (bi->fof_galaxy_data.max_group_mass < bj->fof_galaxy_data.max_group_mass ||
+      (bi->fof_galaxy_data.max_group_mass ==
+           bj->fof_galaxy_data.max_group_mass &&
+       bi->id < bj->id)) {
+    return;
+  }
+
+  /* ssutherland NOTE:
    * EAGLE uses the mass of the more massive BH when calculating the escape
    * velocity. Is this necessary? I would think that we only check the
-   * swallowing BH's mass.  */
+   * swallowing BH's mass.
+   *
+   * In spite of the non-symmetric nature of this function, it seems like SWIFT
+   * considers bi swallowing bj to be roughly equivalent to bj swallowing bi.
+   * Therefore, it makes sense to use the maximum mass here (I think). */
 
   /* Get useful constants */
   const float G_Newton = grav_props->G_Newton;
+
+  /* Find the most massive of the two BHs */
+  float M = bi->mass;
+  if (bj->mass > M) {
+    M = bj->mass;
+  }
 
   /* (Square of) max swallowing distance allowed based on the softening */
   const float max_dist_merge2 =
@@ -276,7 +316,7 @@ runner_iact_nonsym_bh_bh_swallow(const float r2, const float dx[3],
   /* If v^2 is below this threshold, the BHs will merge */
   float v2_threshold;
   if (bh_props->merger_threshold_type == BH_mergers_escape_velocity) {
-    v2_threshold = 2.f * G_Newton * bi->mass / sqrt(r2);
+    v2_threshold = 2.f * G_Newton * M / sqrt(r2);
   } else {
     /* Cannot happen! */
 #ifdef SWIFT_DEBUG_CHECKS

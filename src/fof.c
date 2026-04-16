@@ -52,10 +52,6 @@
 #include "tools.h"
 #include "tracers.h"
 
-#define fof_props_default_group_id 2147483647
-#define fof_props_default_group_id_offset 1
-#define fof_props_default_group_link_size 20000
-
 /* Constants. */
 #define UNION_BY_SIZE_OVER_MPI (1)
 #define FOF_COMPRESS_PATHS_MIN_LENGTH (2)
@@ -3906,7 +3902,7 @@ void fof_assign_group_ids(struct fof_props *props, struct space *s) {
     const size_t root = fof_find_local(i, nr_gparts, group_index);
     gparts[i].fof_data.group_id = gparts[root].fof_data.group_id;
 
-    if (gparts[i].fof_data.group_id != fof_props_default_group_id)
+    if (gparts[i].fof_data.group_id != props->group_id_default)
       max_id = max(max_id, gparts[i].fof_data.group_id);
   }
 
