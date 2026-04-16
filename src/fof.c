@@ -4222,16 +4222,11 @@ void fof_set_black_holes_info(const struct fof_props *props,
           sqrtf((dx[0] * dx[0]) + (dx[1] * dx[1]) + (dx[2] * dx[2]));
       bpart->fof_galaxy_data.distance_to_CoM = r;
 
+      float new_group_mass = props->group_mass[index];
+      bpart->fof_galaxy_data.group_mass = new_group_mass;
+
       /* If we are the central BH, then we update the properties */
       if (bpart->id == central_part_id[index]) {
-        float new_group_mass = props->group_mass[index];
-
-        /*
-        bpart->fof_galaxy_data.group_size = bpart->gpart->fof_data.group_size;
-        bpart->fof_galaxy_data.group_gas_mass = props->group_gas_mass[index];
-        */
-
-        bpart->fof_galaxy_data.group_mass = new_group_mass;
         bpart->fof_galaxy_data.max_group_mass =
             fmaxf(bpart->fof_galaxy_data.max_group_mass, new_group_mass);
         bpart->fof_galaxy_data.is_central = 1;
