@@ -11,8 +11,7 @@ EOF
 }
 
 PARMETIS=/mnt/home/ssutherland/codes/libs/parmetis/
-ONETBB=/mnt/home/ssutherland/codes/libs/oneTBB/
-FLAGS="--enable-fof --with-black-holes=ECHOES --enable-optimization=no --with-hydro=sphenix --with-tbbmalloc=${ONETBB} --enable-mpi=no"
+FLAGS="--enable-fof --with-black-holes=ECHOES --enable-optimization=no --with-hydro=sphenix --enable-mpi=no --with-jemalloc"
 
 for a in "$@"; do
     case $a in
@@ -43,6 +42,7 @@ if [ $MPI ]; then
     module load hdf5/mpi-1.12.3
     module load gsl/2.7.1
     module load fftw/mpi-3.3.10
+    module load jemalloc/5.3.0
     export LD_LIBRARY_PATH="$LD_LIBRARY_PATH:/mnt/home/ssutherland/codes/libs/parmetis/"
 else
     module load modules/2.3-20240529
@@ -50,6 +50,7 @@ else
     module load hdf5/1.12.3
     module load gsl/2.7.1
     module load fftw/3.3.10
+    module load jemalloc/5.3.0
 fi
 
 ./autogen.sh
