@@ -24,6 +24,7 @@
 #include "cell.h"
 #include "cosmology.h"
 #include "entropy_floor.h"
+#include "error.h"
 #include "gravity_properties.h"
 #include "kernel_gravity.h"
 #include "kernel_hydro.h"
@@ -261,6 +262,12 @@ runner_iact_nonsym_bh_bh_swallow(const float r2, const float dx[3],
     if (bi_id != bj_id && bj_id != bh_props->group_id_default) {
       return;
     }
+#ifdef SWIFT_DEBUG_CHECKS
+    if (bi->fof_galaxy_data.is_central && bj->fof_galaxy_data.is_central) {
+      error("BHs %lld and %lld are both in group %ld, but are both central!",
+            bi->id, bj->id, bi_id);
+    }
+#endif
   }
 
   /* Disallow smaller BHs from swallowing larger ones.
