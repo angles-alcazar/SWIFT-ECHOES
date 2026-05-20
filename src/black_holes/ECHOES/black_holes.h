@@ -87,6 +87,9 @@ __attribute__((always_inline)) INLINE static void black_holes_init_bpart(
 /**
  * @brief Predict additional particle fields forward in time when drifting
  *
+ * The fields do not get predicted but we move the BH to its new position
+ * if a new one was calculated in the repositioning loop.
+ *
  * @param bp The particle
  * @param dt_drift The drift time-step for positions.
  */
