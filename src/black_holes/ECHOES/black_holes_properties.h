@@ -30,6 +30,8 @@ enum BH_merger_threshold {
      velocity. */
   BH_mergers_escape_velocity,
 
+  /*! BHs will merge if one is with the kernel of the other. */
+  BH_mergers_kernel,
 };
 
 enum BH_central_criterion {
@@ -149,9 +151,13 @@ static INLINE void black_holes_props_init(struct black_holes_props *bp,
   parser_get_param_string(params, "ECHOES:merger_threshold_type", temp);
   if (!strcmp(temp, "EscapeVelocity")) {
     bp->merger_threshold_type = BH_mergers_escape_velocity;
+  } else if (!strcmp(temp, "Kernel")) {
+    bp->merger_threshold_type = BH_mergers_kernel;
   } else {
-    error("The galaxy merger model must be one of EscapeVelocity, not %s",
-          temp);
+    error(
+        "The galaxy merger model must be one of EscapeVelocity or Kernel, "
+        "not %s",
+        temp);
   }
 
   bp->max_merging_distance_ratio =
@@ -198,8 +204,8 @@ INLINE static void black_holes_struct_dump(
 }
 
 /**
- * @brief Restore a black_holes_props struct from the given FILE as a stream of
- * bytes.
+ * @brief Restore a black_holes_props struct from the given FILE as a stream
+ * of bytes.
  *
  * @param props the black hole properties struct
  * @param stream the file stream
