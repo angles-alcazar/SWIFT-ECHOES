@@ -41,6 +41,11 @@ enum BH_central_criterion {
  */
 struct black_holes_props {
 
+  /*! Default group ID to give to particles not in a group.
+   *  We steal this from the FoF parameters because we need to check when
+   * disallowing integroup mergers. */
+  size_t group_id_default;
+
   /*! Resolution parameter */
   float eta_neighbours;
 
@@ -80,10 +85,6 @@ struct black_holes_props {
   /*! Should black holes be allowed to merge when in different FoF groups? */
   int allow_intergroup_mergers;
 
-  /*! Default group ID to give to particles not in a group.
-   *  We steal this from the FoF parameters because we need to check when
-   * disallowing integroup mergers. */
-  size_t group_id_default;
 };
 
 /**
