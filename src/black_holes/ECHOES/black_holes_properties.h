@@ -85,6 +85,9 @@ struct black_holes_props {
   /*! Should black holes be allowed to merge when in different FoF groups? */
   int allow_intergroup_mergers;
 
+  /*! Maximum relative peculiar velocity squared that a particle can have for a
+   * BH to reposition to it. */
+  float repos_v2_threshold;
 };
 
 /**
@@ -168,6 +171,12 @@ static INLINE void black_holes_props_init(struct black_holes_props *bp,
   /* We steal this from the FoF props */
   bp->group_id_default = parser_get_opt_param_int(
       params, "FOF:group_id_default", fof_props_default_group_id);
+
+  float repos_v_threshold =
+      parser_get_param_float(params,
+                             "ECHOES:reposition_velocity_threshold_km_s") *
+      (1e5 / (us->UnitLength_in_cgs / us->UnitTime_in_cgs));
+  bp->repos_v2_threshold = repos_v_threshold * repos_v_threshold;
 }
 
 /**
