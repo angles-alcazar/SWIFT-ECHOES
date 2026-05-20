@@ -26,11 +26,16 @@
 #include <string.h>
 
 enum BH_merger_threshold {
-  BH_mergers_escape_velocity, /* TODO: some insightful description */
+  /*! BHs will merge if their relative velocity is less than their escape
+     velocity. */
+  BH_mergers_escape_velocity,
+
 };
 
 enum BH_central_criterion {
-  BH_central_peak_mass, /* TODO: some insightful description */
+  /*! A BH is considered central if it has the highest peak group mass of all
+   * the groups BHs. */
+  BH_central_peak_mass,
 };
 
 /**
