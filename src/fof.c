@@ -4140,6 +4140,8 @@ void fof_set_black_holes_info(const struct fof_props *props,
 #ifdef BLACK_HOLES_ECHOES
   struct bpart *bparts = s->bparts;
   size_t nr_bparts = s->nr_bparts;
+  const int periodic = s->periodic;
+  const double dim[3] = {s->dim[0], s->dim[1], s->dim[2]};
 
   float *central_gal_mass = NULL;
   long long *central_part_id = NULL;
@@ -4206,16 +4208,24 @@ void fof_set_black_holes_info(const struct fof_props *props,
     } else {
       const size_t index = bpart->gpart->fof_data.group_id - 1;
 
-      double dx[3] = {
-          props->group_centre_of_mass[index * 3 + 0] - bpart->x[0],
-          props->group_centre_of_mass[index * 3 + 1] - bpart->x[1],
-          props->group_centre_of_mass[index * 3 + 2] - bpart->x[2],
-      };
+      /* Set CoM as the origin*/
+      double x[3] = {bpart->x[0], bpart->x[1], bpart->x[2]};
+      for (int k = 0; k < 3; k++) {
+        if (periodic) {
+          x[k] = box_wrap(
+              x[k] + (dim[k] / 2.) - props->group_centre_of_mass[index * 3 + k],
+              0., dim[k]);
+          x[k] -= dim[k] / 2.;
+        } else {
+          x[k] -= props->group_centre_of_mass[index * 3 + k];
+        }
+      }
+
+      /* Calculate the radius*/
       /* sutherland TODO: See if we can handle this such
        * that we don't actually need to store r. If storing r^2 is ok, then we
        * could convert to r only when outputting for a snapshot. */
-      const float r =
-          sqrtf((dx[0] * dx[0]) + (dx[1] * dx[1]) + (dx[2] * dx[2]));
+      const float r = sqrtf((x[0] * x[0]) + (x[1] * x[1]) + (x[2] * x[2]));
       bpart->fof_galaxy_data.distance_to_CoM = r;
 
       float new_group_mass = props->group_mass[index];
