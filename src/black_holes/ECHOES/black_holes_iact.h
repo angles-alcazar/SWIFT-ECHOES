@@ -126,14 +126,16 @@ runner_iact_nonsym_bh_gas_repos(
   /* Are we too far away? */
   if (r2 >= max_dist_repos2) return;
 
-  /* Now check the velocity */
-  const float delta_v[3] = {bi->v[0] - pj->v[0], bi->v[1] - pj->v[1],
-                            bi->v[2] - pj->v[2]};
-  const float v2 = delta_v[0] * delta_v[0] + delta_v[1] * delta_v[1] +
-                   delta_v[2] * delta_v[2];
-  const float v2_pec = v2 * cosmo->a2_inv;
-  const float v2_max = bh_props->repos_v2_threshold;
-  if (v2_pec >= v2_max) return;
+  if (bh_props->enable_repos_v_threshold) {
+    /* Now check the velocity */
+    const float delta_v[3] = {bi->v[0] - pj->v[0], bi->v[1] - pj->v[1],
+                              bi->v[2] - pj->v[2]};
+    const float v2 = delta_v[0] * delta_v[0] + delta_v[1] * delta_v[1] +
+                     delta_v[2] * delta_v[2];
+    const float v2_pec = v2 * cosmo->a2_inv;
+    const float v2_max = bh_props->repos_v2_threshold;
+    if (v2_pec >= v2_max) return;
+  }
 
   float potential = pj->black_holes_data.potential;
 
