@@ -21,11 +21,15 @@
 
 #include "black_holes_part.h"
 #include "black_holes_properties.h"
+#include "cell.h"
 #include "cosmology.h"
 #include "entropy_floor.h"
+#include "error.h"
 #include "gravity_properties.h"
 #include "kernel_gravity.h"
 #include "kernel_hydro.h"
+
+#include <math.h>
 
 /**
  * @brief Density interaction between two particles (non-symmetric).
@@ -122,6 +126,17 @@ runner_iact_nonsym_bh_gas_repos(
   /* Are we too far away? */
   if (r2 >= max_dist_repos2) return;
 
+  if (bh_props->enable_repos_v_threshold) {
+    /* Now check the velocity */
+    const float delta_v[3] = {bi->v[0] - pj->v[0], bi->v[1] - pj->v[1],
+                              bi->v[2] - pj->v[2]};
+    const float v2 = delta_v[0] * delta_v[0] + delta_v[1] * delta_v[1] +
+                     delta_v[2] * delta_v[2];
+    const float v2_pec = v2 * cosmo->a2_inv;
+    const float v2_max = bh_props->repos_v2_threshold;
+    if (v2_pec >= v2_max) return;
+  }
+
   float potential = pj->black_holes_data.potential;
 
   /* Is the potential lower? */
@@ -206,6 +221,15 @@ runner_iact_nonsym_bh_bh_repos(const float r2, const float dx[3],
   /* Are we too far away? */
   if (r2 >= max_dist_repos2) return;
 
+  /* Now check the velocity */
+  const float delta_v[3] = {bi->v[0] - bj->v[0], bi->v[1] - bj->v[1],
+                            bi->v[2] - bj->v[2]};
+  const float v2 = delta_v[0] * delta_v[0] + delta_v[1] * delta_v[1] +
+                   delta_v[2] * delta_v[2];
+  const float v2_pec = v2 * cosmo->a2_inv;
+  const float v2_max = bh_props->repos_v2_threshold;
+  if (v2_pec >= v2_max) return;
+
   float potential = bj->reposition.potential;
 
   /* Is the potential lower? */
@@ -244,13 +268,56 @@ runner_iact_nonsym_bh_bh_swallow(const float r2, const float dx[3],
                                  const struct black_holes_props *bh_props,
                                  const integertime_t ti_current) {
 
-  /* NOTE:
+  if (!bh_props->allow_intergroup_mergers) {
+    /* ssutherland: Do we want to store the group_id in the bpart itself to
+     * avoid this double indirection? */
+    size_t bi_id = bi->gpart->fof_data.group_id;
+    size_t bj_id = bj->gpart->fof_data.group_id;
+
+    /* Require being in a group to swallow other BHs */
+    if (bi_id == bh_props->group_id_default) return;
+
+    /* Disallow swallowing when BHs are in different FoF groups.
+     * If bj isn't in a fof group at all, it can still be swallowed. */
+    if (bi_id != bj_id && bj_id != bh_props->group_id_default) {
+      return;
+    }
+#ifdef SWIFT_DEBUG_CHECKS
+    if (bi->fof_galaxy_data.is_central && bj->fof_galaxy_data.is_central) {
+      error("BHs %lld and %lld are both in group %ld, but are both central!",
+            bi->id, bj->id, bi_id);
+    }
+#endif
+  }
+
+  /* Disallow smaller BHs from swallowing larger ones.
+   * In the case of mass ties, the BH with the larger ID swallows the other. */
+  /* ssutherland NOTE: EAGLE has a similar condition on the subgrid mass which
+   * we did not initially inherit.*/
+  if (bi->fof_galaxy_data.max_group_mass < bj->fof_galaxy_data.max_group_mass ||
+      (bi->fof_galaxy_data.max_group_mass ==
+           bj->fof_galaxy_data.max_group_mass &&
+       bi->id < bj->id)) {
+    return;
+  }
+
+  /* ssutherland NOTE:
    * EAGLE uses the mass of the more massive BH when calculating the escape
    * velocity. Is this necessary? I would think that we only check the
-   * swallowing BH's mass.  */
+   * swallowing BH's mass.
+   *
+   * In spite of the non-symmetric nature of this function, it seems like SWIFT
+   * considers bi swallowing bj to be roughly equivalent to bj swallowing bi.
+   * Therefore, it makes sense to use the maximum mass here (I think). */
 
   /* Get useful constants */
   const float G_Newton = grav_props->G_Newton;
+
+  /* Find the most massive of the two BHs */
+  float M = bi->mass;
+  if (bj->mass > M) {
+    M = bj->mass;
+  }
 
   /* (Square of) max swallowing distance allowed based on the softening */
   const float max_dist_merge2 =
@@ -260,34 +327,41 @@ runner_iact_nonsym_bh_bh_swallow(const float r2, const float dx[3],
       bh_props->max_merging_distance_ratio * grav_props->epsilon_baryon_cur *
       grav_props->epsilon_baryon_cur;
 
-  /* Compute relative velocity */
-  const float delta_v[3] = {
-      bi->v[0] - bj->v[0],
-      bi->v[1] - bj->v[1],
-      bi->v[2] - bj->v[2],
-  };
-  /* |v|^2 */
-  const float v2 = delta_v[0] * delta_v[0] + delta_v[1] * delta_v[1] +
-                   delta_v[2] * delta_v[2];
-  /* Peculiar velocity.
-   * Velocity in SWIFT is (v_pec * a) */
-  const float v2_pec = v2 * cosmo->a2_inv;
-
-  /* If v^2 is below this threshold, the BHs will merge */
-  float v2_threshold;
+  int can_merge = 0;
   if (bh_props->merger_threshold_type == BH_mergers_escape_velocity) {
-    v2_threshold = 2.f * G_Newton * bi->mass / sqrt(r2);
+
+    /* Compute relative velocity */
+    const float delta_v[3] = {
+        bi->v[0] - bj->v[0],
+        bi->v[1] - bj->v[1],
+        bi->v[2] - bj->v[2],
+    };
+    /* |v|^2 */
+    const float v2 = delta_v[0] * delta_v[0] + delta_v[1] * delta_v[1] +
+                     delta_v[2] * delta_v[2];
+    /* Peculiar velocity.
+     * Velocity in SWIFT is (v_pec * a) */
+    const float v2_pec = v2 * cosmo->a2_inv;
+
+    /* If v^2 is below this threshold, the BHs will merge */
+    float v2_threshold;
+    v2_threshold = 2.f * G_Newton * M / sqrt(r2);
+
+    can_merge = (v2_pec < v2_threshold);
+  } else if (bh_props->merger_threshold_type == BH_mergers_kernel) {
+    /* The kernel criterion is always handled below. */
+    can_merge = 1;
   } else {
     /* Cannot happen! */
 #ifdef SWIFT_DEBUG_CHECKS
-    error("Invalid choice of BH merger threshold type");
+    error("Invalid choice of galaxy merger threshold type");
 #endif
-    v2_threshold = 0.f;
+    can_merge = 0;
   }
 
   /* If they are close enough and the peculiar velocity is under the escape
    * velocity threshold. */
-  if ((v2_pec < v2_threshold) && (r2 < max_dist_merge2)) {
+  if (can_merge && (r2 < max_dist_merge2)) {
     /* This particle is swallowed by the BH with the largest mass of all the
      * candidates wanting to swallow it (we use IDs to break ties)*/
     if ((bj->merger_data.swallow_mass < bi->mass) ||

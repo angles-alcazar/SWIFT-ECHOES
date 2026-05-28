@@ -209,6 +209,7 @@ int main(int argc, char *argv[]) {
   int with_eagle = 0;
   int with_gear = 0;
   int with_agora = 0;
+  int with_echoes = 0;
   int with_line_of_sight = 0;
   int with_rt = 0;
   int with_power = 0;
@@ -309,6 +310,12 @@ int main(int argc, char *argv[]) {
           "Run with all the options needed for the AGORA model. This is "
           "equivalent to --hydro --limiter --sync --self-gravity --stars "
           "--star-formation --cooling --feedback.",
+          NULL, 0, 0),
+      OPT_BOOLEAN(
+          0, "echoes", &with_echoes,
+          "Run with all the options needed for the ECHOES model. This is "
+          "equivalent to --hydro --limiter --sync --self-gravity --black-holes"
+          "--fof.",
           NULL, 0, 0),
 
       OPT_GROUP("  Control options:\n"),
@@ -424,6 +431,14 @@ int main(int argc, char *argv[]) {
     with_star_formation = 1;
     with_cooling = 1;
     with_feedback = 1;
+  }
+  if (with_echoes) {
+    with_hydro = 1;
+    with_timestep_limiter = 1;
+    with_timestep_sync = 1;
+    with_self_gravity = 1;
+    with_black_holes = 1;
+    with_fof = 1;
   }
 #ifdef MOVING_MESH
   if (with_hydro) {

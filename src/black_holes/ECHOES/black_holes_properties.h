@@ -20,12 +20,24 @@
 #define SWIFT_ECHOES_BLACK_HOLES_PROPERTIES_H
 
 #include "chemistry.h"
+#include "fof.h"
 #include "hydro_properties.h"
 
 #include <string.h>
 
 enum BH_merger_threshold {
-  BH_mergers_escape_velocity, /* TODO: some insightful description */
+  /*! BHs will merge if their relative velocity is less than their escape
+     velocity. */
+  BH_mergers_escape_velocity,
+
+  /*! BHs will merge if one is with the kernel of the other. */
+  BH_mergers_kernel,
+};
+
+enum BH_central_criterion {
+  /*! A BH is considered central if it has the highest peak group mass of all
+   * the groups BHs. */
+  BH_central_peak_mass,
 };
 
 /**
@@ -35,6 +47,11 @@ enum BH_merger_threshold {
  * required by the neighbour search.
  */
 struct black_holes_props {
+
+  /*! Default group ID to give to particles not in a group.
+   *  We steal this from the FoF parameters because we need to check when
+   * disallowing integroup mergers. */
+  size_t group_id_default;
 
   /*! Resolution parameter */
   float eta_neighbours;
@@ -63,8 +80,24 @@ struct black_holes_props {
   /*! Maximal distance to reposition, in units of softening length */
   float max_reposition_distance_ratio;
 
-  /* Which criterion for black hole mergers are we using? */
+  /*! Maximal ratio by which ECHOES galaxy masses can change between FOF runs */
+  float max_group_mass_change;
+
+  /*! Which criterion for black hole mergers are we using? */
   enum BH_merger_threshold merger_threshold_type;
+
+  /*! Which criterion for black holes to be considered central are we using? */
+  enum BH_central_criterion central_criterion;
+
+  /*! Should black holes be allowed to merge when in different FoF groups? */
+  int allow_intergroup_mergers;
+
+  /*! Should we consider relative velocity when doing BH repositioning? */
+  int enable_repos_v_threshold;
+
+  /*! Maximum relative peculiar velocity squared that a particle can have for a
+   * BH to reposition to it. */
+  float repos_v2_threshold;
 };
 
 /**
@@ -121,14 +154,49 @@ static INLINE void black_holes_props_init(struct black_holes_props *bp,
   parser_get_param_string(params, "ECHOES:merger_threshold_type", temp);
   if (!strcmp(temp, "EscapeVelocity")) {
     bp->merger_threshold_type = BH_mergers_escape_velocity;
+  } else if (!strcmp(temp, "Kernel")) {
+    bp->merger_threshold_type = BH_mergers_kernel;
   } else {
-    error("The BH merger model must be one of EscapeVelocity, not %s", temp);
+    error(
+        "The galaxy merger model must be one of EscapeVelocity or Kernel, "
+        "not %s",
+        temp);
   }
 
   bp->max_merging_distance_ratio =
       parser_get_param_float(params, "ECHOES:merger_max_distance_ratio");
+
   bp->max_reposition_distance_ratio =
       parser_get_param_float(params, "ECHOES:max_reposition_distance_ratio");
+
+  bp->max_group_mass_change =
+      parser_get_param_float(params, "ECHOES:max_group_mass_change");
+
+  parser_get_param_string(params, "ECHOES:central_galaxy_criterion", temp);
+  if (!strcmp(temp, "PeakMass")) {
+    bp->central_criterion = BH_central_peak_mass;
+  } else {
+    error("The galaxy central criterion must be one of PeakMass, not %s", temp);
+  }
+
+  bp->allow_intergroup_mergers =
+      parser_get_param_int(params, "ECHOES:allow_intergroup_mergers");
+
+  /* We steal this from the FoF props */
+  bp->group_id_default = parser_get_opt_param_int(
+      params, "FOF:group_id_default", fof_props_default_group_id);
+
+  bp->enable_repos_v_threshold = parser_get_param_int(
+      params, "ECHOES:enable_reposition_velocity_threshold");
+  if (bp->enable_repos_v_threshold) {
+    float repos_v_threshold =
+        parser_get_param_float(params,
+                               "ECHOES:reposition_velocity_threshold_km_s") *
+        (1e5 / (us->UnitLength_in_cgs / us->UnitTime_in_cgs));
+    bp->repos_v2_threshold = repos_v_threshold * repos_v_threshold;
+  } else {
+    bp->repos_v2_threshold = FLT_MAX;
+  }
 }
 
 /**
@@ -145,8 +213,8 @@ INLINE static void black_holes_struct_dump(
 }
 
 /**
- * @brief Restore a black_holes_props struct from the given FILE as a stream of
- * bytes.
+ * @brief Restore a black_holes_props struct from the given FILE as a stream
+ * of bytes.
  *
  * @param props the black hole properties struct
  * @param stream the file stream

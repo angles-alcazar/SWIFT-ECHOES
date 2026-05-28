@@ -26,6 +26,7 @@
 #include "black_holes_struct.h"
 #include "cooling_properties.h"
 #include "dimension.h"
+#include "fof.h"
 #include "gravity.h"
 #include "kernel_hydro.h"
 #include "minmax.h"
@@ -85,6 +86,9 @@ __attribute__((always_inline)) INLINE static void black_holes_init_bpart(
 
 /**
  * @brief Predict additional particle fields forward in time when drifting
+ *
+ * The fields do not get predicted but we move the BH to its new position
+ * if a new one was calculated in the repositioning loop.
  *
  * @param bp The particle
  * @param dt_drift The drift time-step for positions.
@@ -311,6 +315,12 @@ __attribute__((always_inline)) INLINE static void black_holes_swallow_bpart(
 
   bpi->number_of_mergers++;
   bpi->cumulative_number_of_seeds += bpj->cumulative_number_of_seeds;
+
+  bpi->fof_galaxy_data.is_central |= bpj->fof_galaxy_data.is_central;
+  bpi->fof_galaxy_data.max_group_mass = fmaxf(
+      bpi->fof_galaxy_data.max_group_mass, bpj->fof_galaxy_data.max_group_mass);
+  bpi->fof_galaxy_data.group_mass =
+      fmaxf(bpi->fof_galaxy_data.group_mass, bpj->fof_galaxy_data.group_mass);
 }
 
 /**
@@ -477,6 +487,9 @@ INLINE static void black_holes_create_from_gas(
 
   /* Likewise it's not been swallowed yet either */
   black_holes_mark_bpart_as_not_swallowed(&bp->merger_data);
+
+  /* All its fof data has to be initialized as well */
+  fof_first_init_bpart(bp);
 
   /* First initialisation */
   black_holes_init_bpart(bp);

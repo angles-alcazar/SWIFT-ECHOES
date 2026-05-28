@@ -142,15 +142,29 @@ INLINE static void black_holes_write_particles(const struct bpart *bparts,
   list[num++] = io_make_output_field("Masses", FLOAT, 1, UNIT_CONV_MASS, 0.f,
                                      bparts, mass, "Masses of the particles");
 
-  list[num++] =
-      io_make_output_field("GroupGasMasses", FLOAT, 1, UNIT_CONV_MASS, 0.f,
-                           bparts, fof_galaxy_data.group_gas_mass,
-                           "Masses of gas particles in the host FOF group.");
+  // list[num++] =
+  //     io_make_output_field("GroupGasMasses", FLOAT, 1, UNIT_CONV_MASS, 0.f,
+  //                          bparts, fof_galaxy_data.group_gas_mass,
+  //                          "Masses of gas particles in the host FOF group.");
 
   list[num++] =
       io_make_output_field("GroupMasses", FLOAT, 1, UNIT_CONV_MASS, 0.f, bparts,
                            fof_galaxy_data.group_mass,
                            "Masses of all particles in the host FOF group.");
+
+  list[num++] = io_make_output_field(
+      "MaxGroupMasses", FLOAT, 1, UNIT_CONV_MASS, 0.f, bparts,
+      fof_galaxy_data.max_group_mass, "Maximum reached group mass.");
+
+  list[num++] =
+      io_make_physical_output_field("Central", INT, 1, UNIT_CONV_NO_UNITS, 0.f,
+                                    bparts, fof_galaxy_data.is_central, 0,
+                                    "Is the particle considering itself the "
+                                    "central galaxy in its host halo?");
+
+  list[num++] = io_make_output_field(
+      "DistanceToGroup", FLOAT, 1, UNIT_CONV_LENGTH, 1.f, bparts,
+      fof_galaxy_data.distance_to_CoM, "Distance to FOF group center of mass.");
 
   list[num++] = io_make_physical_output_field(
       "ParticleIDs", ULONGLONG, 1, UNIT_CONV_NO_UNITS, 0.f, bparts, id,
@@ -167,31 +181,31 @@ INLINE static void black_holes_write_particles(const struct bpart *bparts,
   list[num++] = io_make_physical_output_field(
       "CumulativeNumberOfSeeds", INT, 1, UNIT_CONV_NO_UNITS, 0.f, bparts,
       cumulative_number_of_seeds, /*can convert to comoving=*/0,
-      "Total number of BH seeds that have merged into this black hole");
+      "Total number of galaxy seeds that have merged into this galaxy");
 
   list[num++] = io_make_physical_output_field(
       "NumberOfMergers", INT, 1, UNIT_CONV_NO_UNITS, 0.f, bparts,
       number_of_mergers, /*can convert to comoving=*/1,
-      "Number of mergers the black holes went through. "
+      "Number of mergers the galaxy went through. "
       "This does not include the number of mergers "
-      "accumulated by any merged black hole.");
+      "accumulated by any merged galaxy.");
 
   list[num++] = io_make_physical_output_field(
       "NumberOfRepositions", INT, 1, UNIT_CONV_NO_UNITS, 0.f, bparts,
       number_of_repositions, /*can convert to comoving=*/1,
-      "Number of repositioning events the black holes went through. This does "
+      "Number of repositioning events the galaxies went through. This does "
       "not include the number of reposition events accumulated by any merged "
-      "black holes.");
+      "galaxies.");
 
   list[num++] = io_make_physical_output_field(
       "NumberOfRepositionAttempts", INT, 1, UNIT_CONV_NO_UNITS, 0.f, bparts,
       number_of_reposition_attempts, /*can convert to comoving=*/1,
-      "Number of time steps in which the black holes had an eligible particle "
+      "Number of time steps in which the galaxies had an eligible particle "
       "to reposition to. They may or may not have ended up moving there, "
       "depending on their mass and on whether these particles were at "
-      "a lower or higher potential than the black holes themselves. It does "
+      "a lower or higher potential than the galaxies themselves. It does "
       "not include attempted repositioning events accumulated by any merged "
-      "black holes.");
+      "galaxies.");
 
 #ifdef DEBUG_INTERACTIONS_BLACK_HOLES
   list[num++] = io_make_output_field(

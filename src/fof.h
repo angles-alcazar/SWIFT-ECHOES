@@ -28,6 +28,10 @@
 #include "part.h"
 #include "part_type.h"
 
+#define fof_props_default_group_id 2147483647
+#define fof_props_default_group_id_offset 1
+#define fof_props_default_group_link_size 20000
+
 /* Avoid cyclic inclusions */
 struct cell;
 struct gpart;
