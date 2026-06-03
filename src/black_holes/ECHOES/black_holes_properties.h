@@ -30,6 +30,10 @@ enum BH_merger_threshold {
      velocity. */
   BH_mergers_escape_velocity,
 
+  /*! BHs will merge if their relative velocity is less than twice their
+   * escape velocity. */
+  BH_mergers_2_escape_velocity,
+
   /*! BHs will merge if one is with the kernel of the other. */
   BH_mergers_kernel,
 };
@@ -154,11 +158,14 @@ static INLINE void black_holes_props_init(struct black_holes_props *bp,
   parser_get_param_string(params, "ECHOES:merger_threshold_type", temp);
   if (!strcmp(temp, "EscapeVelocity")) {
     bp->merger_threshold_type = BH_mergers_escape_velocity;
+  } else if (!strcmp(temp, "EscapeVelocity2")) {
+    bp->merger_threshold_type = BH_mergers_2_escape_velocity;
   } else if (!strcmp(temp, "Kernel")) {
     bp->merger_threshold_type = BH_mergers_kernel;
   } else {
     error(
-        "The galaxy merger model must be one of EscapeVelocity or Kernel, "
+        "The galaxy merger model must be one of EscapeVelocity, "
+        "EscapeVelocity2, or Kernel, "
         "not %s",
         temp);
   }
