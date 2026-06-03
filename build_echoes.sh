@@ -12,7 +12,7 @@ EOF
 }
 
 PARMETIS=/mnt/home/ssutherland/codes/libs/parmetis/
-FLAGS="--enable-fof --with-black-holes=ECHOES --enable-optimization=no --with-hydro=sphenix --enable-mpi=no --with-jemalloc"
+FLAGS="--enable-fof --with-black-holes=ECHOES --enable-optimization=no --with-hydro=sphenix --enable-mpi=no --with-jemalloc --with-gcc-arch=broadwell"
 
 for a in "$@"; do
     case $a in
@@ -20,7 +20,7 @@ for a in "$@"; do
             FLAGS="$FLAGS --enable-debug=yes --enable-debugging-checks"
             ;;
         -o|--opt)
-            FLAGS="$FLAGS --enable-optimization=yes --with-gcc-arch=native"
+            FLAGS="$FLAGS --enable-optimization=yes"
             ;;
         --mpi)
             FLAGS="$FLAGS --enable-mpi=yes --with-parmetis=${PARMETIS}"
