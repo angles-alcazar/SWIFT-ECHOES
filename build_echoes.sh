@@ -43,7 +43,7 @@ if [ $MPI ]; then
     module load gsl/2.7.1
     module load fftw/mpi-3.3.10
     module load jemalloc/5.3.0
-    export LD_LIBRARY_PATH="$LD_LIBRARY_PATH:/mnt/home/ssutherland/codes/libs/parmetis/"
+    export LD_LIBRARY_PATH="$LD_LIBRARY_PATH:$PARMETIS"
 else
     module load modules/2.3-20240529
     module load gcc/11.4.0
