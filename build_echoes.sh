@@ -7,6 +7,7 @@ Usage:
   -d, --debug   build SWIFT with debug information
   -o, --opt     build SWIFT with optimizations on
   -h, --help    show this message
+  --mpi         enable an MPI build of SWIFT
 EOF
 }
 
