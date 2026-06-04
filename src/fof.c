@@ -18,7 +18,6 @@
  ******************************************************************************/
 
 /* Config parameters. */
-#include "black_holes/ECHOES/black_holes_properties.h"
 #include "physical_constants.h"
 
 #include <config.h>

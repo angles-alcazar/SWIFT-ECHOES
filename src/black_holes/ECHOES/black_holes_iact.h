@@ -348,6 +348,26 @@ runner_iact_nonsym_bh_bh_swallow(const float r2, const float dx[3],
     v2_threshold = 2.f * G_Newton * M / sqrt(r2);
 
     can_merge = (v2_pec < v2_threshold);
+  } else if (bh_props->merger_threshold_type == BH_mergers_2_escape_velocity) {
+
+    /* Compute relative velocity */
+    const float delta_v[3] = {
+        bi->v[0] - bj->v[0],
+        bi->v[1] - bj->v[1],
+        bi->v[2] - bj->v[2],
+    };
+    /* |v|^2 */
+    const float v2 = delta_v[0] * delta_v[0] + delta_v[1] * delta_v[1] +
+                     delta_v[2] * delta_v[2];
+    /* Peculiar velocity.
+     * Velocity in SWIFT is (v_pec * a) */
+    const float v2_pec = v2 * cosmo->a2_inv;
+
+    /* If v^2 is below this threshold, the BHs will merge */
+    float v2_threshold;
+    v2_threshold = 8.f * G_Newton * M / sqrt(r2);
+
+    can_merge = (v2_pec < v2_threshold);
   } else if (bh_props->merger_threshold_type == BH_mergers_kernel) {
     /* The kernel criterion is always handled below. */
     can_merge = 1;

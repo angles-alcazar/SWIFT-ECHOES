@@ -7,11 +7,12 @@ Usage:
   -d, --debug   build SWIFT with debug information
   -o, --opt     build SWIFT with optimizations on
   -h, --help    show this message
+  --mpi         enable an MPI build of SWIFT
 EOF
 }
 
 PARMETIS=/mnt/home/ssutherland/codes/libs/parmetis/
-FLAGS="--enable-fof --with-black-holes=ECHOES --enable-optimization=no --with-hydro=sphenix --enable-mpi=no --with-jemalloc"
+FLAGS="--enable-fof --with-black-holes=ECHOES --enable-optimization=no --with-hydro=sphenix --enable-mpi=no --with-jemalloc --with-gcc-arch=broadwell"
 
 for a in "$@"; do
     case $a in
@@ -19,7 +20,7 @@ for a in "$@"; do
             FLAGS="$FLAGS --enable-debug=yes --enable-debugging-checks"
             ;;
         -o|--opt)
-            FLAGS="$FLAGS --enable-optimization=yes --with-gcc-arch=native"
+            FLAGS="$FLAGS --enable-optimization=yes"
             ;;
         --mpi)
             FLAGS="$FLAGS --enable-mpi=yes --with-parmetis=${PARMETIS}"
@@ -43,7 +44,7 @@ if [ $MPI ]; then
     module load gsl/2.7.1
     module load fftw/mpi-3.3.10
     module load jemalloc/5.3.0
-    export LD_LIBRARY_PATH="$LD_LIBRARY_PATH:/mnt/home/ssutherland/codes/libs/parmetis/"
+    export LD_LIBRARY_PATH="$LD_LIBRARY_PATH:$PARMETIS"
 else
     module load modules/2.3-20240529
     module load gcc/11.4.0
