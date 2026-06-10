@@ -59,6 +59,11 @@ __attribute__((always_inline)) INLINE static void black_holes_first_init_bpart(
     struct bpart *bp, const struct black_holes_props *props) {
 
   bp->time_bin = 0;
+
+  bp->fof_properties.group_mass = 0.f;
+  bp->fof_properties.max_group_mass = 0.f;
+  bp->fof_properties.distance_to_CoM = 0.f;
+  bp->fof_properties.is_central = 0;
 }
 
 /**
@@ -316,11 +321,11 @@ __attribute__((always_inline)) INLINE static void black_holes_swallow_bpart(
   bpi->number_of_mergers++;
   bpi->cumulative_number_of_seeds += bpj->cumulative_number_of_seeds;
 
-  bpi->fof_galaxy_data.is_central |= bpj->fof_galaxy_data.is_central;
-  bpi->fof_galaxy_data.max_group_mass = fmaxf(
-      bpi->fof_galaxy_data.max_group_mass, bpj->fof_galaxy_data.max_group_mass);
-  bpi->fof_galaxy_data.group_mass =
-      fmaxf(bpi->fof_galaxy_data.group_mass, bpj->fof_galaxy_data.group_mass);
+  bpi->fof_properties.is_central |= bpj->fof_properties.is_central;
+  bpi->fof_properties.max_group_mass = fmaxf(
+      bpi->fof_properties.max_group_mass, bpj->fof_properties.max_group_mass);
+  bpi->fof_properties.group_mass =
+      fmaxf(bpi->fof_properties.group_mass, bpj->fof_properties.group_mass);
 }
 
 /**
@@ -344,7 +349,11 @@ __attribute__((always_inline)) INLINE static void black_holes_prepare_feedback(
     const struct phys_const *constants, const struct cosmology *cosmo,
     const struct cooling_function_data *cooling,
     const struct entropy_floor_properties *floor_props, const double time,
-    const int with_cosmology, const double dt, const integertime_t ti_begin) {}
+    const int with_cosmology, const double dt, const integertime_t ti_begin) {
+  /* sutherland: note to DAA - This is a good place to update all of our
+   * echoes_properties. If we want to do stuff with virialization, the cosmology
+   * struct has a field overdensity_BN98 which may help. */
+}
 
 /**
  * @brief Finish the calculation of the new BH position.
@@ -488,11 +497,72 @@ INLINE static void black_holes_create_from_gas(
   /* Likewise it's not been swallowed yet either */
   black_holes_mark_bpart_as_not_swallowed(&bp->merger_data);
 
-  /* All its fof data has to be initialized as well */
-  fof_first_init_bpart(bp);
-
   /* First initialisation */
   black_holes_init_bpart(bp);
+
+  bp->fof_properties.group_mass = 0.f;
+  bp->fof_properties.max_group_mass = 0.f;
+  bp->fof_properties.distance_to_CoM = 0.f;
+  bp->fof_properties.is_central = 0;
+}
+
+/**
+ * @brief Store FoF-related properties in a #bpart.
+ *
+ * @param props The properties of the BH scheme.
+ * @param r2 Comoving square distance between the BH and the FoF center of mass.
+ * @param group_mass Mass of the FoF group the BH is in. 0. if the BH is not in
+ * a group.
+ * @param is_central Is the BH central? BHs outside of FoF groups are never
+ * central.
+ * @param bp The black hole to update.
+ */
+__attribute__((always_inline)) INLINE static void
+black_holes_update_fof_properties(const struct black_holes_props *const props,
+                                  float r2, float group_mass, int is_central,
+                                  struct bpart *const bp) {
+  if (bp->gpart->fof_data.group_id == props->group_id_default) {
+    /* BHs that are not in a group have their group data reset */
+    bp->fof_properties.group_mass = 0.f;
+    bp->fof_properties.distance_to_CoM = 0.f;
+    bp->fof_properties.is_central = 0;
+  } else {
+
+    /* sutherland TODO: See if we can handle this such
+     * that we don't actually need to store r. If storing r^2 is ok, then we
+     * could convert to r only when outputting for a snapshot. */
+    bp->fof_properties.distance_to_CoM = sqrtf(r2);
+
+    bp->fof_properties.group_mass = group_mass;
+
+    bp->fof_properties.is_central = is_central;
+    /* If we are the central BH, then we update the max group data. */
+    if (is_central) {
+      bp->fof_properties.max_group_mass =
+          fmaxf(bp->fof_properties.max_group_mass, group_mass);
+    }
+  }
+}
+
+/**
+ * @brief Give this #bpart's priority for being considered the central black
+ * hole in a FoF group.
+ *
+ * @param props The properties of the BH scheme.
+ * @param bp The black hole give the priority of.
+ */
+__attribute__((always_inline)) INLINE static float black_holes_central_priority(
+    const struct black_holes_props *const props, const struct bpart *const bp) {
+  if (props->central_criterion == BH_central_peak_mass) {
+    return bp->fof_properties.max_group_mass;
+  } else {
+#ifdef SWIFT_DEBUG_CHECKS
+    error("Invalid choice of central galaxy criterion");
+#else
+    /* Got to return something if we don't error */
+    return -1;
+#endif
+  }
 }
 
 #endif /* SWIFT_ECHOES_BLACK_HOLES_H */

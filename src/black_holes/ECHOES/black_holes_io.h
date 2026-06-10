@@ -144,27 +144,27 @@ INLINE static void black_holes_write_particles(const struct bpart *bparts,
 
   // list[num++] =
   //     io_make_output_field("GroupGasMasses", FLOAT, 1, UNIT_CONV_MASS, 0.f,
-  //                          bparts, fof_galaxy_data.group_gas_mass,
+  //                          bparts, group_gas_mass,
   //                          "Masses of gas particles in the host FOF group.");
 
   list[num++] =
       io_make_output_field("GroupMasses", FLOAT, 1, UNIT_CONV_MASS, 0.f, bparts,
-                           fof_galaxy_data.group_mass,
+                           fof_properties.group_mass,
                            "Masses of all particles in the host FOF group.");
 
-  list[num++] = io_make_output_field(
-      "MaxGroupMasses", FLOAT, 1, UNIT_CONV_MASS, 0.f, bparts,
-      fof_galaxy_data.max_group_mass, "Maximum reached group mass.");
+  list[num++] = io_make_output_field("MaxGroupMasses", FLOAT, 1, UNIT_CONV_MASS,
+                                     0.f, bparts, fof_properties.max_group_mass,
+                                     "Maximum reached group mass.");
 
   list[num++] =
       io_make_physical_output_field("Central", INT, 1, UNIT_CONV_NO_UNITS, 0.f,
-                                    bparts, fof_galaxy_data.is_central, 0,
+                                    bparts, fof_properties.is_central, 0,
                                     "Is the particle considering itself the "
                                     "central galaxy in its host halo?");
 
   list[num++] = io_make_output_field(
       "DistanceToGroup", FLOAT, 1, UNIT_CONV_LENGTH, 1.f, bparts,
-      fof_galaxy_data.distance_to_CoM, "Distance to FOF group center of mass.");
+      fof_properties.distance_to_CoM, "Distance to FOF group center of mass.");
 
   list[num++] = io_make_physical_output_field(
       "ParticleIDs", ULONGLONG, 1, UNIT_CONV_NO_UNITS, 0.f, bparts, id,

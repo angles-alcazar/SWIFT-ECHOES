@@ -4123,68 +4123,52 @@ void fof_struct_restore(struct fof_props *props, FILE *stream) {
   fof_set_current_types(props);
 }
 
-void fof_first_init_bpart(struct bpart *bpart) {
-#ifdef BLACK_HOLES_ECHOES
-  bpart->fof_galaxy_data.group_mass = 0.f;
-  bpart->fof_galaxy_data.max_group_mass = 0.f;
-  bpart->fof_galaxy_data.distance_to_CoM = 0.f;
-  bpart->fof_galaxy_data.is_central = 0;
-#endif
-}
-
 void fof_set_black_holes_info(const struct fof_props *props,
                               const struct black_holes_props *bh_props,
                               const struct phys_const *constants,
                               const struct cosmology *cosmo, struct space *s) {
-#ifdef BLACK_HOLES_ECHOES
   struct bpart *bparts = s->bparts;
   size_t nr_bparts = s->nr_bparts;
   const int periodic = s->periodic;
   const double dim[3] = {s->dim[0], s->dim[1], s->dim[2]};
 
-  float *central_gal_mass = NULL;
+  float *central_priority = NULL;
   long long *central_part_id = NULL;
-  if (swift_memalign("fof_central_gal_mass", (void **)&central_gal_mass, 32,
+  if (swift_memalign("fof_central_gal_mass", (void **)&central_priority, 32,
                      props->num_groups * sizeof(double)) != 0)
     error("Failed to allocate list of galaxy mass for FOF search.");
 
-  /* sutherland TODO: Storing the ID of the closest BH prevents ties from
-   * causing problems. But ties are very very unlikely. Now that the BHs store
-   * their own distance, they can compare that against the min_bpart_radii and
-   * see if they're the central BH. That saves an extra allocation every FOF
-   * run, but is less robust because of ties. */
   if (swift_memalign("fof_min_bpart_id", (void **)&central_part_id, 32,
                      props->num_groups * sizeof(long long)) != 0)
     error("Failed to allocate list of galaxy ID for FOF search.");
 
   /* Initialise the arrays to the limit */
   for (size_t i = 0; i < (size_t)props->num_groups; i++) {
-    /* sutherland NOTE: I use -1 here so that a newly formed galaxy with a halo
-     * mass still set to 0 will be greater than the default value. */
-    central_gal_mass[i] = -1.f;
+    /* sutherland NOTE: I use -1 here so that a newly formed galaxy with a
+     * priority of 0 will be greater than the default value. */
+    central_priority[i] = -1.f;
   }
   for (size_t i = 0; i < (size_t)props->num_groups; i++) {
     central_part_id[i] = LLONG_MAX;
   }
 
   /* Loop 1: Go through all the galaxies to determine which is the central */
-  if (bh_props->central_criterion == BH_central_peak_mass) {
-    for (size_t i = 0; i < nr_bparts; i++) {
-      struct bpart *bpart = &bparts[i];
-      if (bpart->time_bin >= time_bin_inhibited) continue;
-      if (bpart->gpart->fof_data.group_id == props->group_id_default) continue;
+  for (size_t i = 0; i < nr_bparts; i++) {
+    struct bpart *bpart = &bparts[i];
+    if (bpart->time_bin >= time_bin_inhibited) continue;
+    if (bpart->gpart->fof_data.group_id == props->group_id_default) continue;
 
-      const size_t index = bpart->gpart->fof_data.group_id - 1;
+    const size_t index = bpart->gpart->fof_data.group_id - 1;
 
-      if (bpart->fof_galaxy_data.max_group_mass > central_gal_mass[index]) {
-        central_gal_mass[index] = bpart->fof_galaxy_data.max_group_mass;
-        central_part_id[index] = bpart->id;
-      }
+    const float bpart_priority = black_holes_central_priority(bh_props, bpart);
+
+    if (bpart_priority > central_priority[index] ||
+        (bpart_priority == central_priority[index] &&
+         bpart->id > central_part_id[index])) {
+
+      central_priority[index] = bpart_priority;
+      central_part_id[index] = bpart->id;
     }
-  } else {
-#ifdef SWIFT_DEBUG_CHECKS
-    error("Invalid choice of galaxy central criterion type");
-#endif
   }
 
   /* Loop 2: Update BH particles according to whether they are the central or
@@ -4197,17 +4181,22 @@ void fof_set_black_holes_info(const struct fof_props *props,
      * Their gpart link may be broken. */
     if (bpart->time_bin >= time_bin_inhibited) continue;
 
+    float r2;
+    int is_central;
+    float group_mass;
+
     if (bpart->gpart->fof_data.group_id == props->group_id_default) {
-      /* BHs that are not in a group have their group data reset
-       * smsutherland TODO: Should this just call fof_first_init_bpart?
-       * Maybe if it gets marked as inline. */
-      bpart->fof_galaxy_data.group_mass = 0.f;
-      bpart->fof_galaxy_data.distance_to_CoM = 0.f;
-      bpart->fof_galaxy_data.is_central = 0;
+
+      group_mass = 0.f;
+      r2 = 0.f;
+      is_central = 0;
+
     } else {
+
       const size_t index = bpart->gpart->fof_data.group_id - 1;
 
-      /* Set CoM as the origin*/
+      /* Set CoM as the origin.
+       * Handle periodic wrapping of distances. */
       double x[3] = {bpart->x[0], bpart->x[1], bpart->x[2]};
       for (int k = 0; k < 3; k++) {
         if (periodic) {
@@ -4221,30 +4210,18 @@ void fof_set_black_holes_info(const struct fof_props *props,
       }
 
       /* Calculate the radius*/
-      /* sutherland TODO: See if we can handle this such
-       * that we don't actually need to store r. If storing r^2 is ok, then we
-       * could convert to r only when outputting for a snapshot. */
-      const float r = sqrtf((x[0] * x[0]) + (x[1] * x[1]) + (x[2] * x[2]));
-      bpart->fof_galaxy_data.distance_to_CoM = r;
+      r2 = (x[0] * x[0]) + (x[1] * x[1]) + (x[2] * x[2]);
 
-      float new_group_mass = props->group_mass[index];
-      bpart->fof_galaxy_data.group_mass = new_group_mass;
-
-      /* If we are the central BH, then we update the properties */
-      if (bpart->id == central_part_id[index]) {
-        bpart->fof_galaxy_data.max_group_mass =
-            fmaxf(bpart->fof_galaxy_data.max_group_mass, new_group_mass);
-        bpart->fof_galaxy_data.is_central = 1;
-      } else {
-        /* We're not the central galaxy. Mark that fact! */
-        bpart->fof_galaxy_data.is_central = 0;
-      }
+      is_central = bpart->id == central_part_id[index];
+      group_mass = props->group_mass[index];
     }
+
+    black_holes_update_fof_properties(bh_props, r2, group_mass, is_central,
+                                      bpart);
   }
 
-  swift_free("fof_min_bpart_radii", central_gal_mass);
+  swift_free("fof_min_bpart_radii", central_priority);
   swift_free("fof_min_bpart_id", central_part_id);
-#endif /* BLACK_HOLES_ECHOES */
 }
 
 #endif /* WITH_FOF */

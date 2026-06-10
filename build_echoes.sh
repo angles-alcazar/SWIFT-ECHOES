@@ -12,7 +12,7 @@ EOF
 }
 
 PARMETIS=/mnt/home/ssutherland/codes/libs/parmetis/
-FLAGS="--enable-fof --with-black-holes=ECHOES --enable-optimization=no --with-hydro=sphenix --enable-mpi=no --with-jemalloc --with-gcc-arch=broadwell"
+FLAGS="--enable-fof --with-black-holes=ECHOES --enable-optimization=no --with-hydro=sphenix --enable-mpi=no --with-jemalloc --with-gcc-arch=broadwell --with-kernel=wendland-C2"
 
 for a in "$@"; do
     case $a in

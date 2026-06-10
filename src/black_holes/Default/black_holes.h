@@ -348,4 +348,32 @@ INLINE static void black_holes_create_from_gas(
   black_holes_init_bpart(bp);
 }
 
+/**
+ * @brief Store FoF-related properties in a #bpart.
+ *
+ * @param props The properties of the BH scheme.
+ * @param r2 Comoving square distance between the BH and the FoF center of mass.
+ * @param group_mass Mass of the FoF group the BH is in. 0. if the BH is not in
+ * a group.
+ * @param is_central Is the BH central? BHs outside of FoF groups are never
+ * central.
+ * @param bp The black hole to update.
+ */
+__attribute__((always_inline)) INLINE static void
+black_holes_update_fof_properties(const struct black_holes_props *const props,
+                                  float r2, float group_mass, int is_central,
+                                  struct bpart *const bp) {}
+
+/**
+ * @brief Give this #bpart's priority for being considered the central black
+ * hole in a FoF group.
+ *
+ * @param props The properties of the BH scheme.
+ * @param bp The black hole give the priority of.
+ */
+__attribute__((always_inline)) INLINE static float black_holes_central_priority(
+    const struct black_holes_props *const props, const struct bpart *const bp) {
+  return -FLT_MAX;
+}
+
 #endif /* SWIFT_DEFAULT_BLACK_HOLES_H */

@@ -20,7 +20,6 @@
 #define SWIFT_ECHOES_BLACK_HOLE_PART_H
 
 #include "chemistry_struct.h"
-#include "fof_struct.h"
 #include "particle_splitting_struct.h"
 #include "timeline.h"
 
@@ -118,8 +117,6 @@ struct bpart {
   long long ids_ngbs_force[MAX_NUM_OF_NEIGHBOURS_BLACK_HOLES];
 #endif
 
-  struct fof_galaxy_data fof_galaxy_data;
-
   /* Number of BH mergers this particular particle has experienced. */
   int number_of_mergers;
 
@@ -135,6 +132,37 @@ struct bpart {
    * lower potential than all eligible neighbours) */
   int number_of_reposition_attempts;
 
+  struct {
+
+    /*! Sum of masses of all particles in the group. */
+    float group_mass;
+
+    /*! Maximum group mass ever reached by the group. */
+    float max_group_mass;
+
+    /*! Boolean flag for whether the BH particle thinks it's a central BH
+     * sutherland TODO: Maybe save some spaceby reducing the bit footprint of
+     * the bool? For now all the fields are at least 32 bits, so reducing this
+     * to 1 bit wouldn't save any space, but if we have more flags in the
+     * future, we could combine them into a single int, or use C bitfields. What
+     * version of C introduced bitfields? If it's too late we might not want to
+     * include them so as not to break support for older compilers. Unless we
+     * don't really care? Maybe it's better to say we're using a more recent gcc
+     * version. */
+    int is_central;
+
+    /* How far is the BH to the center of mass of its group?
+     * sutherland TODO: How should we handle cases where a BH is no longer in a
+     * group? Options (that I see): Set this to 0, set it to FLT_MAX, keep it at
+     * its previous value */
+    float distance_to_CoM;
+
+  } fof_properties;
+
+  /* sutherland: note to DAA - properties that we want to store for trinity can
+   * go in here. */
+  struct {
+  } echos_properties;
 } SWIFT_STRUCT_ALIGN;
 
 #endif /* SWIFT_ECHOES_BLACK_HOLE_PART_H */

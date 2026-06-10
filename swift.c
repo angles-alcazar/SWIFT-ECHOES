@@ -314,7 +314,7 @@ int main(int argc, char *argv[]) {
       OPT_BOOLEAN(
           0, "echoes", &with_echoes,
           "Run with all the options needed for the ECHOES model. This is "
-          "equivalent to --hydro --limiter --sync --self-gravity --black-holes"
+          "equivalent to --hydro --limiter --sync --self-gravity --black-holes "
           "--fof.",
           NULL, 0, 0),
 

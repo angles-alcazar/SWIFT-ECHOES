@@ -283,7 +283,7 @@ runner_iact_nonsym_bh_bh_swallow(const float r2, const float dx[3],
       return;
     }
 #ifdef SWIFT_DEBUG_CHECKS
-    if (bi->fof_galaxy_data.is_central && bj->fof_galaxy_data.is_central) {
+    if (bi->fof_properties.is_central && bj->fof_properties.is_central) {
       error("BHs %lld and %lld are both in group %ld, but are both central!",
             bi->id, bj->id, bi_id);
     }
@@ -294,9 +294,8 @@ runner_iact_nonsym_bh_bh_swallow(const float r2, const float dx[3],
    * In the case of mass ties, the BH with the larger ID swallows the other. */
   /* ssutherland NOTE: EAGLE has a similar condition on the subgrid mass which
    * we did not initially inherit.*/
-  if (bi->fof_galaxy_data.max_group_mass < bj->fof_galaxy_data.max_group_mass ||
-      (bi->fof_galaxy_data.max_group_mass ==
-           bj->fof_galaxy_data.max_group_mass &&
+  if (bi->fof_properties.max_group_mass < bj->fof_properties.max_group_mass ||
+      (bi->fof_properties.max_group_mass == bj->fof_properties.max_group_mass &&
        bi->id < bj->id)) {
     return;
   }
@@ -428,6 +427,9 @@ runner_iact_nonsym_bh_gas_feedback(
     const struct black_holes_props *bh_props,
     const struct entropy_floor_properties *floor_props,
     const integertime_t ti_current, const double time) {
+  /* sutherland: note to DAA - This is where all our feedback prescriptions will
+   * go. */
+
 #ifdef DEBUG_INTERACTIONS_BH
   /* Update ngb counters */
   if (si->num_ngb_force < MAX_NUM_OF_NEIGHBOURS_BH)
